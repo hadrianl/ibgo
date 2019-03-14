@@ -1,11 +1,8 @@
 package ibgo
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"os"
 	"strconv"
 )
 
@@ -22,11 +19,11 @@ type IbConnection struct {
 	em           extraMethods
 }
 
-type socketEvent interface {
-	connected()
-	disconnected()
-	hasError(err error)
-	hasData()
+type socketEvent struct {
+	connected    chan int
+	disconnected chan int
+	hasError     chan error
+	hasData      chan []byte
 }
 
 type extraMethods interface {
@@ -35,30 +32,46 @@ type extraMethods interface {
 	tcpDataProcessed()
 }
 
-func (ibconn *IbConnection) sendMsg(msg []byte) error {
+func (ibconn *IbConnection) Write(msg []byte) (int, error) {
 	n, err := ibconn.conn.Write(msg)
 	ibconn.numBytesSent += n
 	ibconn.numMsgSent++
-	return err
+	return n, err
 }
 
-func (ibconn *IbConnection) recvMsg() []byte {
-	result, err := ioutil.ReadAll(ibconn.conn)
+func (ibconn *IbConnection) Read(b []byte) (int, error) {
+	n, err := ibconn.conn.Read(b)
+	ibconn.numBytesRecv += n
+	ibconn.numMsgRecv++
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
+		ibconn.event.hasError <- err
+		// ibconn.reset()
+	} else {
+		ibconn.event.hasData <- b
 	}
 
-	return result
+	return n, err
 }
+
+// func (ibconn *IbConnection) Receive() {
+// 	buf := make([]byte, 0, 4096)
+// 	ibconn.Read(buf)
+// 	return buf
+// }
 
 func (ibconn *IbConnection) reset() {
 	ibconn.numBytesSent = 0
 	ibconn.numBytesRecv = 0
 	ibconn.numMsgSent = 0
 	ibconn.numMsgRecv = 0
+	ibconn.event.connected = make(chan int, 1)
+	ibconn.event.disconnected = make(chan int, 1)
+	ibconn.event.hasError = make(chan error, 100)
+	ibconn.event.hasData = make(chan []byte, 100)
 }
 
 func (ibconn *IbConnection) disconnect() error {
+	ibconn.event.disconnected <- 1
 	return ibconn.conn.Close()
 }
 
@@ -76,24 +89,9 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 	ibconn.conn, err = net.DialTCP("tcp4", nil, addr)
 	panicError(err)
 
-	err = ibconn.handShake()
-	panicError(err)
-
 	fmt.Println("connect success!")
+	ibconn.event.connected <- 1
 
-	return err
-}
-
-func (ibconn *IbConnection) handShake() error {
-	var msg bytes.Buffer
-	head := []byte("API\x00")
-	// minVer := []byte("100")
-	// maxVer := []byte("148")
-	// connectOptions := []byte("")
-	msg.Write(head)
-	msg.Write([]byte("\x00\x00\x00\tv100..148"))
-	fmt.Println(msg.Bytes())
-	err := ibconn.sendMsg(msg.Bytes())
 	return err
 }
 

@@ -15,3 +15,7 @@ func TestBytesToInt(t *testing.T) {
 	}
 
 }
+
+func TestIbWrite(t *testing.T) {
+
+}

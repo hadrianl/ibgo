@@ -3,13 +3,24 @@ package main
 import (
 	"fmt"
 	"ibgo"
+	"time"
 )
 
 func main() {
-	client := ibgo.NewIbClient("127.0.0.1", 7497, 6)
+	var err error
+	ic := &ibgo.IbClient{}
+	err = ic.Connect("127.0.0.1", 7497, 10)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("afterConnect")
+	err = ic.HandShake()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("afterhandShake")
 
-	buf := []byte{0, 1, 1, 1}
-
-	fmt.Println(ibgo.BytesToInt(buf))
+	ic.Run()
+	time.Sleep(10 * time.Second)
 
 }
