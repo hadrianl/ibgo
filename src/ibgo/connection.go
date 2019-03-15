@@ -9,7 +9,7 @@ import (
 type IbConnection struct {
 	host         string
 	port         int
-	clientId     int8
+	clientId     int64
 	conn         net.Conn
 	numBytesSent int
 	numMsgSent   int
@@ -64,8 +64,8 @@ func (ibconn *IbConnection) reset() {
 	ibconn.numBytesRecv = 0
 	ibconn.numMsgSent = 0
 	ibconn.numMsgRecv = 0
-	ibconn.event.connected = make(chan int, 1)
-	ibconn.event.disconnected = make(chan int, 1)
+	ibconn.event.connected = make(chan int, 10)
+	ibconn.event.disconnected = make(chan int, 10)
 	ibconn.event.hasError = make(chan error, 100)
 	ibconn.event.hasData = make(chan []byte, 100)
 }
@@ -84,12 +84,18 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 	server := ibconn.host + ":" + strconv.Itoa(port)
 	fmt.Println(server)
 	addr, err = net.ResolveTCPAddr("tcp4", server)
-	panicError(err)
+	if err != nil {
+		fmt.Println("ResolveTCPAddr Error:", err)
+		return err
+	}
 
 	ibconn.conn, err = net.DialTCP("tcp4", nil, addr)
-	panicError(err)
+	if err != nil {
+		fmt.Println("DialTCP Error:", err)
+		return err
+	}
 
-	fmt.Println("connect success!")
+	fmt.Println("connect success!", ibconn.conn.RemoteAddr())
 	ibconn.event.connected <- 1
 
 	return err

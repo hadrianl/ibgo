@@ -7,7 +7,7 @@ import (
 
 func TestBytesToInt(t *testing.T) {
 	buf := []byte{0, 0, 0, 1}
-	size := BytesToInt(buf)
+	size := bytesToInt(buf)
 	if size == 1 {
 		fmt.Println(size)
 	} else {
@@ -18,4 +18,10 @@ func TestBytesToInt(t *testing.T) {
 
 func TestIbWrite(t *testing.T) {
 
+}
+
+func TestSplitMsg(t *testing.T) {
+	f := splitMsgBuf([]byte("API\x00sfsdfs\x00dfsfs\x00"))
+	t.Log(f)
+	// fmt.Println(f)
 }

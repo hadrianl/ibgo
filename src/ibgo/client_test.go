@@ -1,6 +1,7 @@
 package ibgo
 
 import (
+	"fmt"
 	"testing"
 	"time"
 	// "time"
@@ -11,15 +12,17 @@ func TestClient(t *testing.T) {
 	ic := &IbClient{}
 	err = ic.Connect("127.0.0.1", 7497, 10)
 	if err != nil {
-		panic(err)
-	}
-	t.Log("afterConnect")
-	err = ic.HandShake()
-	if err != nil {
-		panic(err)
+		fmt.Println("Connect failed:", err)
+		return
 	}
 
-	t.Log("afterhandShake")
+	fmt.Println("beforeHandShake")
+	err = ic.HandShake()
+	if err != nil {
+		fmt.Println("HandShake failed:", err)
+		return
+	}
+	fmt.Println("afterhandShake")
 
 	ic.Run()
 	time.Sleep(time.Second * 10)

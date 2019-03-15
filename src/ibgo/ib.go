@@ -5,10 +5,10 @@ type IB struct {
 	Wrapper  *IbWrapper
 	host     string
 	port     int
-	clientId int8
+	clientId int64
 }
 
-func NewIB(host string, port int, clientId int8) *IB {
+func NewIB(host string, port int, clientId int64) *IB {
 	ib := &IB{
 		Client:   &IbClient{},
 		Wrapper:  &IbWrapper{},
@@ -21,7 +21,7 @@ func NewIB(host string, port int, clientId int8) *IB {
 }
 
 // Connect to TWS or Gateway
-func (ib *IB) Connect(host string, port int, clientId int8) error {
+func (ib *IB) Connect(host string, port int, clientId int64) error {
 	ib.host = host
 	ib.port = port
 	ib.clientId = clientId
