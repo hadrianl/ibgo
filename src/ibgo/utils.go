@@ -5,14 +5,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 	"math"
+	"time"
 )
 
 const (
-	fieldSplit := []byte("\x00")
+	fieldSplit string = "\x00"
 )
-
 
 // bytesToInt used to convert the first 4 byte into the message size
 func bytesToInt(buf []byte) int32 {
@@ -55,44 +54,45 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 
 }
 
-func makeMsgBuf(msg interface{}) {
-		switch msg.(type) {
-			case string:
-				bs := []byte(msg)
-				return bs
-			case int64:
-				bs := make([]byte, 8)
-				binary.BigEndian.PutUint64(bs, uint64(msg))
-				return bs
-			case float64:
-				bs := make([]byte, 8)
-				bits = math.Float64bits(msg)
-				binary.LittleEndian.PutUint64(bs, bits)
-				return bs
-			case []byte:
-				return msg
-			// case bool:
-			// 	var s string
-			// 	if msg {
-			// 		s = "1"
-			// 	}else {
-			// 		s = "0"
-			// 	}
-			// 	_, err := b.WriteString(s)
-			// case time.Time:
-			// 	t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
-			// 	_, err := b.WriteString(t_string)
+func makeMsgBuf(msg interface{}) []byte {
+	switch _msg := msg.(type) {
+	case string:
+		bs := []byte(_msg)
+		return bs
+	case int64:
+		bs := make([]byte, 8)
+		binary.BigEndian.PutUint64(bs, uint64(_msg))
+		return bs
+	case float64:
+		bs := make([]byte, 8)
+		bits := math.Float64bits(_msg)
+		binary.LittleEndian.PutUint64(bs, bits)
+		return bs
+	case []byte:
+		return _msg
+		// case bool:
+		// 	var s string
+		// 	if msg {
+		// 		s = "1"
+		// 	}else {
+		// 		s = "0"
+		// 	}
+		// 	_, err := b.WriteString(s)
+		// case time.Time:
+		// 	t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
+		// 	_, err := b.WriteString(t_string)
 	}
-
+	return nil
 }
 
-func mergeMsgBuf(msgBufs [][]byte) {
-	msg := bytes.Join(msgBufs, fieldSplit)
+func mergeMsgBuf(msgBufs [][]byte) []byte {
+	msg := bytes.Join(msgBufs, []byte(fieldSplit))
+	return msg
 }
 
 func splitMsgBuf(data []byte) [][]byte {
-	fields := bytes.Split(data, fieldSplit)
-	return fields
+	fields := bytes.Split(data, []byte(fieldSplit))
+	return fields[:len(fields)-1]
 
 }
 
@@ -121,5 +121,3 @@ func splitMsgBuf(data []byte) [][]byte {
 
 // 	return err
 // }
-
-

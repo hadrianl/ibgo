@@ -1,12 +1,12 @@
 package ibgo
 
 import (
-	"strconv"
-	"strings"
 	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,8 +31,8 @@ type IbClient struct {
 	msgChan          chan interface{}
 	timeChan         chan time.Time
 	terminatedSignal chan int
-	clientVersion    ibversion
-	serverVersion    ibversion
+	clientVersion    Version
+	serverVersion    Version
 	serverTime       time.Time
 }
 
@@ -89,33 +89,23 @@ func (ic *IbClient) HandShake() error {
 	msg.Write(sizeofCV)
 	msg.Write(clientVersion)
 	fmt.Println("Send API Init")
+	fmt.Println(msg.Bytes())
 	if _, err := ic.writer.Write(msg.Bytes()); err != nil {
 		return err
 	}
 
-	// get serverVersion
-	if serverVersion, err := ic.reader.ReadBytes(0x00); err != nil {
+	if err := ic.writer.Flush(); err != nil {
 		return err
-	} else {
-		fmt.Printf("ServerVersion: %v", serverVersion)
-		ic.serverVersion = ibversion(bytesToInt(serverVersion[:len(serverVersion)-1]))
-	}
-
-	// get serverTime
-	if serverTime, err := ic.reader.ReadBytes(0x00); err != nil {
-		return err
-	} else {
-		fmt.Printf("ServerTime: %v", serverTime[:len(serverTime)-1])
-		ic.serverTime = bytesToTime(serverTime)
 	}
 
 	fmt.Println("Recv ServerInfo Init")
 	if msgBuf, err := readMsgBuf(ic.reader); err != nil {
+		fmt.Println(err)
 		return err
 	} else {
 		serverInfo := splitMsgBuf(msgBuf)
 		fmt.Println("Recv ServerInfo:", serverInfo)
-		ic.serverVersion = ibversion(bytesToInt(serverInfo[0]))
+		ic.serverVersion = Version(bytesToInt(serverInfo[0]))
 		ic.serverTime = bytesToTime(serverInfo[1])
 	}
 
@@ -127,9 +117,10 @@ func (ic *IbClient) HandShake() error {
 // send the clientId to TWS or Gateway
 func (ic *IbClient) startAPI() error {
 	v := 2
-	fields := []string{strconv.FormatInt(START_API, 10), strconv.FormatInt(v, 10), strconv.FormatInt(ic.clientId, 10)}
-	fields.
-	_, err := ic.writer.Write(strings.Join(fields, "\x00"))
+	fields := []string{strconv.FormatInt(int64(START_API), 10), strconv.FormatInt(int64(v), 10), strconv.FormatInt(int64(ic.clientId), 10)}
+	// fields.
+	fmt.Println("Start API", strings.Join(fields, "\x00"))
+	_, err := ic.writer.WriteString(strings.Join(fields, "\x00"))
 	return err
 }
 

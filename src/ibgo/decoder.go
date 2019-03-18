@@ -2,7 +2,7 @@ package ibgo
 
 type Decoder struct {
 	wrapper IbWrapper
-	version ibversion
+	version Version
 }
 
 type fields struct {
