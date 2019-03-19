@@ -6,11 +6,19 @@ import (
 	"strconv"
 )
 
+const (
+	DISCONNECTED = iota
+	CONNECTING
+	CONNECTED
+	REDIRECT
+)
+
 type IbConnection struct {
 	host         string
 	port         int
 	clientId     int64
 	conn         net.Conn
+	state        int
 	numBytesSent int
 	numMsgSent   int
 	numBytesRecv int
@@ -43,12 +51,12 @@ func (ibconn *IbConnection) Read(b []byte) (int, error) {
 	n, err := ibconn.conn.Read(b)
 	ibconn.numBytesRecv += n
 	ibconn.numMsgRecv++
-	if err != nil {
-		ibconn.event.hasError <- err
-		// ibconn.reset()
-	} else {
-		ibconn.event.hasData <- b
-	}
+	// if err != nil {
+	// 	ibconn.event.hasError <- err
+	// 	// ibconn.reset()
+	// } else {
+	// 	ibconn.event.hasData <- b
+	// }
 
 	return n, err
 }
@@ -59,19 +67,24 @@ func (ibconn *IbConnection) Read(b []byte) (int, error) {
 // 	return buf
 // }
 
+func (ibconn *IbConnection) setState(state int) {
+	ibconn.state = state
+}
+
 func (ibconn *IbConnection) reset() {
 	ibconn.numBytesSent = 0
 	ibconn.numBytesRecv = 0
 	ibconn.numMsgSent = 0
 	ibconn.numMsgRecv = 0
-	ibconn.event.connected = make(chan int, 10)
-	ibconn.event.disconnected = make(chan int, 10)
-	ibconn.event.hasError = make(chan error, 100)
-	ibconn.event.hasData = make(chan []byte, 100)
+	ibconn.setState(DISCONNECTED)
+	// ibconn.event.connected = make(chan int, 10)
+	// ibconn.event.disconnected = make(chan int, 10)
+	// ibconn.event.hasError = make(chan error, 100)
+	// ibconn.event.hasData = make(chan []byte, 100)
 }
 
 func (ibconn *IbConnection) disconnect() error {
-	ibconn.event.disconnected <- 1
+	// ibconn.event.disconnected <- 1
 	return ibconn.conn.Close()
 }
 
@@ -82,7 +95,6 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 	ibconn.port = port
 	ibconn.reset()
 	server := ibconn.host + ":" + strconv.Itoa(port)
-	fmt.Println(server)
 	addr, err = net.ResolveTCPAddr("tcp4", server)
 	if err != nil {
 		fmt.Println("ResolveTCPAddr Error:", err)
@@ -95,22 +107,8 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 		return err
 	}
 
-	fmt.Println("connect success!", ibconn.conn.RemoteAddr())
-	ibconn.event.connected <- 1
+	fmt.Println("TCP Connected to:", ibconn.conn.RemoteAddr())
+	// ibconn.event.connected <- 1
 
 	return err
 }
-
-// func (ic *IbConnection) onSocketHasData(data []byte) {
-// 	ic.em.tcpDataArrived()
-// 	n, err := io.Copy(ec.buffer, ec.conn)
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-// 	}
-// 	ec.numBytesRecv += n
-
-// 	for ec.buffer.len() <= 4 {
-// 		msgLen := 4
-// 	}
-
-// }

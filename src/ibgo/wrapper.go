@@ -1,11 +1,16 @@
 package ibgo
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
-type IbWrapper struct {
+type Wrapper interface {
+	nextValidId(reqId int)
+	managedAccounts(accountsList []Account)
 }
 
-type Account struct {
+type IbWrapper struct {
 }
 
 func (w *IbWrapper) connectAck() {
@@ -13,10 +18,12 @@ func (w *IbWrapper) connectAck() {
 }
 
 func (w *IbWrapper) nextValidId(reqId int) {
+	fmt.Println("nextValidId:", reqId)
 
 }
 
 func (w *IbWrapper) managedAccounts(accountsList []Account) {
+	fmt.Println("managedAccounts:", accountsList)
 
 }
 

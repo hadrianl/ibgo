@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"time"
 )
 
@@ -19,7 +18,7 @@ func bytesToInt(buf []byte) int32 {
 }
 
 func bytesToTime(buf []byte) time.Time {
-	format := "20060102 15:04:05"
+	format := "20060102 15:04:05 CST"
 	t := string(buf)
 	localtime, err := time.ParseInLocation(format, t, time.Local)
 	if err != nil {
@@ -43,6 +42,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 		return nil, err
 	}
 	size := bytesToInt(sizeBuf)
+	// fmt.Println("Get SizeBuf:", size)
 
 	msgBuf := make([]byte, size)
 
@@ -55,39 +55,54 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 }
 
 func makeMsgBuf(msg interface{}) []byte {
-	switch _msg := msg.(type) {
-	case string:
-		bs := []byte(_msg)
-		return bs
-	case int64:
-		bs := make([]byte, 8)
-		binary.BigEndian.PutUint64(bs, uint64(_msg))
-		return bs
-	case float64:
-		bs := make([]byte, 8)
-		bits := math.Float64bits(_msg)
-		binary.LittleEndian.PutUint64(bs, bits)
-		return bs
-	case []byte:
-		return _msg
-		// case bool:
-		// 	var s string
-		// 	if msg {
-		// 		s = "1"
-		// 	}else {
-		// 		s = "0"
-		// 	}
-		// 	_, err := b.WriteString(s)
-		// case time.Time:
-		// 	t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
-		// 	_, err := b.WriteString(t_string)
-	}
-	return nil
+	return append([]byte(fmt.Sprint(msg)), '\x00')
+	// switch msg.(type) {
+	// case string:
+	// 	bs := []byte(msg.(string))
+	// 	return append(bs, '\x00')
+
+	// case int64:
+	// 	bs := make([]byte, 8)
+	// 	binary.BigEndian.PutUint64(bs, uint64(msg.(int64)))
+	// 	return append(bs, '\x00')
+	// case float64:
+	// 	bs := make([]byte, 8)
+	// 	bits := math.Float64bits(msg.(float64))
+	// 	binary.LittleEndian.PutUint64(bs, bits)
+	// 	return append(bs, '\x00')
+	// case []byte:
+	// 	return append(msg.([]byte), '\x00')
+	// 	// case bool:
+	// 	// 	var s string
+	// 	// 	if msg {
+	// 	// 		s = "1"
+	// 	// 	}else {
+	// 	// 		s = "0"
+	// 	// 	}
+	// 	// 	_, err := b.WriteString(s)
+	// 	// case time.Time:
+	// 	// 	t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
+	// 	// 	_, err := b.WriteString(t_string)
+	// }
+	// return nil
 }
 
-func mergeMsgBuf(msgBufs [][]byte) []byte {
-	msg := bytes.Join(msgBufs, []byte(fieldSplit))
+func mergeMsgBuf(fields ...interface{}) []byte {
+	msgBufs := [][]byte{}
+	for _, f := range fields {
+		msgBufField := makeMsgBuf(f)
+		msgBufs = append(msgBufs, msgBufField)
+	}
+	msg := bytes.Join(msgBufs, []byte(""))
 	return msg
+}
+
+func makeMsg(fields ...interface{}) []byte {
+	msg := mergeMsgBuf(fields...)
+	sizeBuf := make([]byte, 4)
+	binary.BigEndian.PutUint32(sizeBuf, uint32(len(msg)))
+
+	return append(sizeBuf, msg...)
 }
 
 func splitMsgBuf(data []byte) [][]byte {

@@ -1,8 +1,8 @@
 package ibgo
 
-type IN int
-type OUT int
-type FiledType int
+type IN int64
+type OUT int64
+type FiledType int64
 type Version int
 
 const (
