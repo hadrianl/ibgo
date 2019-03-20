@@ -24,7 +24,7 @@ type IbClient struct {
 	conn             *IbConnection
 	reader           *bufio.Reader
 	writer           *bufio.Writer
-	wrapper          *IbWrapper
+	wrapper          IbWrapper
 	decoder          *IbDecoder
 	inBuffer         *bytes.Buffer
 	outBuffer        *bytes.Buffer
@@ -133,6 +133,7 @@ func (ic *IbClient) HandShake() error {
 	}
 
 	ic.conn.setState(CONNECTED)
+	ic.wrapper.connectAck()
 
 	return nil
 }
@@ -160,7 +161,7 @@ func (ic *IbClient) startAPI() error {
 func (ic *IbClient) reset() {
 	ic.reqIdSeq = 0
 	ic.conn = &IbConnection{}
-	ic.wrapper = &IbWrapper{}
+	ic.wrapper = Wrapper{ic: ic}
 	ic.decoder = &IbDecoder{wrapper: ic.wrapper}
 	ic.conn.reset()
 	ic.reader = bufio.NewReader(ic.conn)
@@ -175,9 +176,17 @@ func (ic *IbClient) reset() {
 
 }
 
+func (ic *IbClient) reqCurrentTime() {
+	v := 1
+	msg := makeMsg(REQ_CURRENT_TIME, v)
+
+	ic.reqChan <- msg
+}
+
 //goRequest will get the req from reqChan and send it to TWS
 func (ic *IbClient) goRequest() {
-	fmt.Println("Start Request!")
+	fmt.Println("Start goRequest!")
+requestLoop:
 	for {
 		select {
 		case req := <-ic.reqChan:
@@ -188,11 +197,12 @@ func (ic *IbClient) goRequest() {
 			}
 			ic.writer.Flush()
 		case <-ic.terminatedSignal:
-			break
+			// fmt.Println("goRequest terminate")
+			break requestLoop
 		}
-		ic.wg.Done()
-
 	}
+	ic.wg.Done()
+	fmt.Println("End goRequest!")
 }
 
 //goReceive receive the msg from the socket, get the fields and put them into msgChan
@@ -200,7 +210,6 @@ func (ic *IbClient) goReceive() {
 	// defer
 	fmt.Println("Start goReceive!")
 	// buf := make([]byte, 0, 4096)
-	defer ic.reader.Reset(ic.conn)
 	for {
 		// buf := []byte
 		msgBuf, err := readMsgBuf(ic.reader)
@@ -220,11 +229,13 @@ func (ic *IbClient) goReceive() {
 
 	}
 	ic.wg.Done()
+	fmt.Println("End goReceive!")
 }
 
 //goDecode decode the fields received from the msgChan
 func (ic *IbClient) goDecode() {
 	fmt.Println("Start goDecode!")
+decodeLoop:
 	for {
 		// buf := []byte
 		select {
@@ -232,10 +243,12 @@ func (ic *IbClient) goDecode() {
 			ic.decoder.interpret(f...)
 			fmt.Println(f)
 		case <-ic.terminatedSignal:
-			break
+			// fmt.Println("goDecode terminate")
+			break decodeLoop
 		}
 	}
 	ic.wg.Done()
+	fmt.Println("End goDecode!")
 
 }
 

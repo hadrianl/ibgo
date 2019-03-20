@@ -5,211 +5,216 @@ import (
 	"time"
 )
 
-type Wrapper interface {
+type IbWrapper interface {
 	nextValidId(reqId int)
 	managedAccounts(accountsList []Account)
+	connectAck()
+	error(reqId int, errCode int, errString string)
+	currentTime(t time.Time)
 }
 
-type IbWrapper struct {
+type Wrapper struct {
+	ic *IbClient
 }
 
-func (w *IbWrapper) connectAck() {
+func (w Wrapper) connectAck() {
 
 }
 
-func (w *IbWrapper) nextValidId(reqId int) {
+func (w Wrapper) nextValidId(reqId int) {
 	fmt.Println("nextValidId:", reqId)
 
 }
 
-func (w *IbWrapper) managedAccounts(accountsList []Account) {
+func (w Wrapper) managedAccounts(accountsList []Account) {
 	fmt.Println("managedAccounts:", accountsList)
 
 }
 
-func (w *IbWrapper) updateAccountTime(timestamp time.Time) {
+func (w *Wrapper) updateAccountTime(timestamp time.Time) {
 
 }
-func (w *IbWrapper) updateAccountValue(tag string, val float32, currency string, account Account) {
-
-}
-
-func (w *IbWrapper) accountDownloadEnd(_account Account) {
+func (w *Wrapper) updateAccountValue(tag string, val float32, currency string, account Account) {
 
 }
 
-func (w *IbWrapper) accountUpdateMulti(reqId int, account Account, modelCode int, tag string, val float32, currency string) {
+func (w *Wrapper) accountDownloadEnd(_account Account) {
 
 }
 
-func (w *IbWrapper) accountUpdateMultiEnd(reqId int) {
+func (w *Wrapper) accountUpdateMulti(reqId int, account Account, modelCode int, tag string, val float32, currency string) {
 
 }
 
-func (w *IbWrapper) accountSummary() {
+func (w *Wrapper) accountUpdateMultiEnd(reqId int) {
 
 }
 
-func (w *IbWrapper) accountSummaryEnd() {
+func (w *Wrapper) accountSummary() {
 
 }
 
-func (w *IbWrapper) updatePortfolio() {
+func (w *Wrapper) accountSummaryEnd() {
 
 }
-func (w *IbWrapper) position() {
+
+func (w *Wrapper) updatePortfolio() {
 
 }
-func (w *IbWrapper) positionEnd() {
+func (w *Wrapper) position() {
 
 }
-func (w *IbWrapper) pnl() {
+func (w *Wrapper) positionEnd() {
 
 }
-func (w *IbWrapper) pnlSingle() {
+func (w *Wrapper) pnl() {
 
 }
-func (w *IbWrapper) openOrder() {
+func (w *Wrapper) pnlSingle() {
 
 }
-func (w *IbWrapper) openOrderEnd() {
+func (w *Wrapper) openOrder() {
 
 }
-func (w *IbWrapper) orderStatus() {
+func (w *Wrapper) openOrderEnd() {
 
 }
-func (w *IbWrapper) execDetails() {
+func (w *Wrapper) orderStatus() {
 
 }
-func (w *IbWrapper) execDetailsEnd() {
+func (w *Wrapper) execDetails() {
 
 }
-func (w *IbWrapper) commissionReport() {
+func (w *Wrapper) execDetailsEnd() {
 
 }
-func (w *IbWrapper) orderBound() {
+func (w *Wrapper) commissionReport() {
 
 }
-func (w *IbWrapper) contractDetails() {
+func (w *Wrapper) orderBound() {
 
 }
-func (w *IbWrapper) contractDetailsEnd() {
+func (w *Wrapper) contractDetails() {
 
 }
-func (w *IbWrapper) symbolSamples() {
+func (w *Wrapper) contractDetailsEnd() {
 
 }
-func (w *IbWrapper) marketRule() {
+func (w *Wrapper) symbolSamples() {
 
 }
-func (w *IbWrapper) realtimeBar() {
+func (w *Wrapper) marketRule() {
 
 }
-func (w *IbWrapper) historicalData() {
+func (w *Wrapper) realtimeBar() {
 
 }
-func (w *IbWrapper) historicalDataEnd() {
+func (w *Wrapper) historicalData() {
 
 }
-func (w *IbWrapper) historicalDataUpdate() {
+func (w *Wrapper) historicalDataEnd() {
 
 }
-func (w *IbWrapper) headTimestamp() {
+func (w *Wrapper) historicalDataUpdate() {
 
 }
-func (w *IbWrapper) historicalTicks() {
+func (w *Wrapper) headTimestamp() {
 
 }
-func (w *IbWrapper) historicalTicksBidAsk() {
+func (w *Wrapper) historicalTicks() {
 
 }
-func (w *IbWrapper) historicalTicksLast() {
+func (w *Wrapper) historicalTicksBidAsk() {
 
 }
-func (w *IbWrapper) priceSizeTick() {
+func (w *Wrapper) historicalTicksLast() {
 
 }
-func (w *IbWrapper) tickSize() {
+func (w *Wrapper) priceSizeTick() {
 
 }
-func (w *IbWrapper) tickSnapshotEnd() {
+func (w *Wrapper) tickSize() {
 
 }
-func (w *IbWrapper) tickByTickAllLast() {
+func (w *Wrapper) tickSnapshotEnd() {
 
 }
-func (w *IbWrapper) tickByTickBidAsk() {
+func (w *Wrapper) tickByTickAllLast() {
 
 }
-func (w *IbWrapper) tickByTickMidPoint() {
+func (w *Wrapper) tickByTickBidAsk() {
 
 }
-func (w *IbWrapper) tickString() {
+func (w *Wrapper) tickByTickMidPoint() {
 
 }
-func (w *IbWrapper) tickGeneric() {
+func (w *Wrapper) tickString() {
 
 }
-func (w *IbWrapper) tickReqParams() {
+func (w *Wrapper) tickGeneric() {
 
 }
-func (w *IbWrapper) mktDepthExchanges() {
+func (w *Wrapper) tickReqParams() {
 
 }
-func (w *IbWrapper) updateMktDepth() {
+func (w *Wrapper) mktDepthExchanges() {
 
 }
-func (w *IbWrapper) updateMktDepthL2() {
+func (w *Wrapper) updateMktDepth() {
 
 }
-func (w *IbWrapper) tickOptionComputation() {
+func (w *Wrapper) updateMktDepthL2() {
 
 }
-func (w *IbWrapper) fundamentalData() {
+func (w *Wrapper) tickOptionComputation() {
 
 }
-func (w *IbWrapper) scannerParameters() {
+func (w *Wrapper) fundamentalData() {
 
 }
-func (w *IbWrapper) scannerData() {
+func (w *Wrapper) scannerParameters() {
 
 }
-func (w *IbWrapper) scannerDataEnd() {
+func (w *Wrapper) scannerData() {
 
 }
-func (w *IbWrapper) histogramData() {
+func (w *Wrapper) scannerDataEnd() {
 
 }
-func (w *IbWrapper) securityDefinitionOptionParameter() {
+func (w *Wrapper) histogramData() {
 
 }
-func (w *IbWrapper) securityDefinitionOptionParameterEnd() {
+func (w *Wrapper) securityDefinitionOptionParameter() {
 
 }
-func (w *IbWrapper) newsProviders() {
+func (w *Wrapper) securityDefinitionOptionParameterEnd() {
 
 }
-func (w *IbWrapper) tickNews() {
+func (w *Wrapper) newsProviders() {
 
 }
-func (w *IbWrapper) newsArticle() {
+func (w *Wrapper) tickNews() {
 
 }
-func (w *IbWrapper) historicalNews() {
+func (w *Wrapper) newsArticle() {
 
 }
-func (w *IbWrapper) historicalNewsEnd() {
+func (w *Wrapper) historicalNews() {
 
 }
-func (w *IbWrapper) updateNewsBulletin() {
+func (w *Wrapper) historicalNewsEnd() {
 
 }
-func (w *IbWrapper) receiveFA() {
+func (w *Wrapper) updateNewsBulletin() {
 
 }
-func (w *IbWrapper) currentTime() {
+func (w *Wrapper) receiveFA() {
 
 }
-func (w *IbWrapper) error() {
+func (w Wrapper) currentTime(t time.Time) {
+
+}
+func (w Wrapper) error(reqId int, errCode int, errString string) {
+	fmt.Printf("reqId: %v errCode: %v errString: %v\n", reqId, errCode, errString)
 
 }

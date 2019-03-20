@@ -2,7 +2,7 @@ package ibgo
 
 type IB struct {
 	Client   *IbClient
-	Wrapper  *IbWrapper
+	Wrapper  Wrapper
 	host     string
 	port     int
 	clientId int64
@@ -11,7 +11,7 @@ type IB struct {
 func NewIB(host string, port int, clientId int64) *IB {
 	ib := &IB{
 		Client:   &IbClient{},
-		Wrapper:  &IbWrapper{},
+		Wrapper:  Wrapper{},
 		host:     host,
 		port:     port,
 		clientId: clientId,

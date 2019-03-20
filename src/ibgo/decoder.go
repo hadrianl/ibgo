@@ -1,18 +1,20 @@
 package ibgo
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type IbDecoder struct {
-	wrapper       *IbWrapper
+	wrapper       IbWrapper
 	version       Version
 	msgId2process map[IN]func([][]byte)
 }
 
 //NewIbDecoder create a decoder to decode the fileds based on version
-func NewIbDecoder(wrapper *IbWrapper, version Version) *IbDecoder {
+func NewIbDecoder(wrapper IbWrapper, version Version) *IbDecoder {
 	decoder := IbDecoder{}
 	decoder.wrapper = wrapper
 	decoder.version = version
@@ -33,22 +35,47 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 	processer(fs[1:])
 }
 
+// func (d *IbDecoder) interpretWithSignature(fs [][]byte, processer interface{}) {
+// 	if processer == nil {
+// 		fmt.Println("No processer")
+// 	}
+
+// 	processerType := reflect.TypeOf(processer)
+// 	params := make([]interface{}, processerType.NumIn())
+// 	for i, f := range fs[1:] {
+// 		switch processerType.In(i).Kind() {
+// 		case reflect.Int:
+// 			param := strconv.Atoi(string(f))
+// 		case reflect.Float64:
+// 			param, _ := strconv.ParseFloat(string(f), 64)
+// 		default:
+// 			param := string(f)
+// 		}
+// 		params = append(params, param)
+
+// 	}
+
+// 	processer(params...)
+// }
+
 func (d *IbDecoder) setmsgId2process() {
 	d.msgId2process = map[IN]func([][]byte){
 
-		NEXT_VALID_ID: d.processNextValidId,
-		MANAGED_ACCTS: d.processManagedAccounts,
+		NEXT_VALID_ID: d.wrapNextValidId,
+		MANAGED_ACCTS: d.wrapManagedAccounts,
+		ERR_MSG:       d.wrapError,
+		CURRENT_TIME:  d.wrapCurrentTime,
 	}
 
 }
 
-func (d *IbDecoder) processNextValidId(f [][]byte) {
+func (d *IbDecoder) wrapNextValidId(f [][]byte) {
 	reqId, _ := strconv.Atoi(string(f[1]))
 	d.wrapper.nextValidId(reqId)
 
 }
 
-func (d *IbDecoder) processManagedAccounts(f [][]byte) {
+func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
 	accNames := strings.Split(string(f[1]), ",")
 
 	accsList := []Account{}
@@ -57,6 +84,20 @@ func (d *IbDecoder) processManagedAccounts(f [][]byte) {
 	}
 	d.wrapper.managedAccounts(accsList)
 
+}
+
+func (d *IbDecoder) wrapError(f [][]byte) {
+	reqId, _ := strconv.Atoi(string(f[1]))
+	errorCode, _ := strconv.Atoi(string(f[2]))
+	errorString := string(f[3])
+
+	d.wrapper.error(reqId, errorCode, errorString)
+}
+
+func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
+	ts, _ := strconv.ParseInt(string(f[1]), 10, 64)
+	t := time.Unix(ts, 0)
+	fmt.Printf("CurrentTime :%v", t)
 }
 
 func (d *IbDecoder) processTickPriceMsg(f [][]byte) {

@@ -22,6 +22,8 @@ func TestClient(t *testing.T) {
 		return
 	}
 
+	ic.reqCurrentTime()
+
 	ic.Run()
 	time.Sleep(time.Second * 10)
 	ic.Disconnect()
