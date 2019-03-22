@@ -2,6 +2,7 @@ package ibgo
 
 import (
 	"bytes"
+	"log"
 	"strconv"
 	"time"
 )
@@ -34,8 +35,12 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 	}
 
 	MsgId, _ := strconv.ParseInt(string(fs[0]), 10, 64)
-	processer := d.msgId2process[IN(MsgId)]
-	processer(fs[1:])
+	if processer, ok := d.msgId2process[IN(MsgId)]; ok {
+		processer(fs[1:])
+	} else {
+		log.Printf("MsgId: %v -> MsgBuf: %v", MsgId, fs[1:])
+	}
+
 }
 
 // func (d *IbDecoder) interpretWithSignature(fs [][]byte, processer interface{}) {
@@ -68,6 +73,7 @@ func (d *IbDecoder) setmsgId2process() {
 		ORDER_STATUS:  d.processOrderStatusMsg,
 		ERR_MSG:       d.wrapError,
 		OPEN_ORDER:    d.processOpenOrder,
+		ACCT_VALUE:    d.wrapUpdateAccountValue,
 		NEXT_VALID_ID: d.wrapNextValidId,
 		MANAGED_ACCTS: d.wrapManagedAccounts,
 
@@ -99,6 +105,15 @@ func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
 	}
 	d.wrapper.managedAccounts(accsList)
 
+}
+
+func (d *IbDecoder) wrapUpdateAccountValue(f [][]byte) {
+	tag := decodeString(f[1])
+	val := decodeFloat(f[2])
+	currency := decodeString(f[3])
+	accName := decodeString(f[4])
+
+	d.wrapper.updateAccountValue(tag, val, currency, accName)
 }
 
 func (d *IbDecoder) wrapError(f [][]byte) {
@@ -192,6 +207,7 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 
 func (d *IbDecoder) processOpenOrder(f [][]byte) {
 
+	log.Println("processOpenOrders:", f)
 	var version int64
 	if d.version < MIN_SERVER_VER_ORDER_CONTAINER {
 		version = decodeInt(f[0])

@@ -3,7 +3,6 @@
 package ibgo
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -111,7 +110,7 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 		return err
 	}
 
-	fmt.Println("TCP Connected to:", ibconn.conn.RemoteAddr())
+	log.Println("TCP Connected to:", ibconn.conn.RemoteAddr())
 	// ibconn.event.connected <- 1
 
 	return err

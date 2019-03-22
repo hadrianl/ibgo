@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
+	"log"
 	"strconv"
 	"time"
 )
 
 const (
-	fieldSplit string = "\x00"
+	fieldSplit byte = '\x00'
 )
 
 // bytesToInt used to convert the first 4 byte into the message size
@@ -23,16 +23,9 @@ func bytesToTime(buf []byte) time.Time {
 	t := string(buf)
 	localtime, err := time.ParseInLocation(format, t, time.Local)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	return localtime
-}
-
-func panicError(err error) {
-	if err != nil {
-		panic(err)
-		// os.Exit(1)
-	}
 }
 
 // readMsg try to read the msg based on the message size
@@ -43,7 +36,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 		return nil, err
 	}
 	size := bytesToInt(sizeBuf)
-	// fmt.Println("Get SizeBuf:", size)
+	log.Println("Get SizeBuf:", size)
 
 	msgBuf := make([]byte, size)
 
@@ -59,9 +52,13 @@ func makeMsgBuf(msg interface{}) []byte {
 	var b []byte
 
 	switch msg.(type) {
-	case int64:
-		b = encodeInt(msg.(int64))
 
+	case int:
+		b = encodeInt(msg.(int))
+	case int64:
+		b = encodeInt64(msg.(int64))
+	case OUT:
+		b = encodeInt64(int64(msg.(OUT))) // maybe there is a better solution
 	case float64:
 		b = encodeFloat(msg.(float64))
 
@@ -71,7 +68,7 @@ func makeMsgBuf(msg interface{}) []byte {
 		b = encodeBool(msg.(bool))
 
 	default:
-		panic("can't converst the param")
+		log.Panic("errmakeMsgBuf: can't converst the param")
 	}
 
 	return append(b, '\x00')
@@ -96,7 +93,7 @@ func makeMsg(fields ...interface{}) []byte {
 }
 
 func splitMsgBuf(data []byte) [][]byte {
-	fields := bytes.Split(data, []byte(fieldSplit))
+	fields := bytes.Split(data, []byte{fieldSplit})
 	return fields[:len(fields)-1]
 
 }
@@ -115,8 +112,13 @@ func decodeString(field []byte) string {
 	return string(field)
 }
 
-func encodeInt(i int64) []byte {
+func encodeInt64(i int64) []byte {
 	bs := []byte(strconv.FormatInt(i, 10))
+	return bs
+}
+
+func encodeInt(i int) []byte {
+	bs := []byte(strconv.Itoa(i))
 	return bs
 }
 

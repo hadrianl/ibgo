@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -85,15 +85,15 @@ func (ic *IbClient) Disconnect() error {
 		return err
 	}
 	ic.conn.setState(DISCONNECTED)
+	defer log.Println("Disconnected!")
 	ic.wg.Wait()
-	fmt.Println("Disconnected!")
 
 	return nil
 }
 
 // handshake with the TWS or GateWay to ensure the version
 func (ic *IbClient) HandShake() error {
-	fmt.Println("Try to handShake with TWS or GateWay...")
+	log.Println("Try to handShake with TWS or GateWay...")
 	var msg bytes.Buffer
 	head := []byte("API\x00")
 	minVer := []byte("100")
@@ -105,7 +105,7 @@ func (ic *IbClient) HandShake() error {
 	msg.Write(head)
 	msg.Write(sizeofCV)
 	msg.Write(clientVersion)
-	fmt.Println("HandShake Init...")
+	log.Println("HandShake Init...")
 	if _, err := ic.writer.Write(msg.Bytes()); err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	fmt.Println("Recv ServerInfo...")
+	log.Println("Recv ServerInfo...")
 	if msgBuf, err := readMsgBuf(ic.reader); err != nil {
 		return err
 	} else {
@@ -124,8 +124,8 @@ func (ic *IbClient) HandShake() error {
 		ic.serverTime = bytesToTime(serverInfo[1])
 		ic.decoder.setVersion(ic.serverVersion) // Init Decoder
 		ic.decoder.setmsgId2process()
-		fmt.Println("ServerVersion:", ic.serverVersion)
-		fmt.Println("ServerTime:", ic.serverTime)
+		log.Println("ServerVersion:", ic.serverVersion)
+		log.Println("ServerTime:", ic.serverTime)
 	}
 
 	if err := ic.startAPI(); err != nil {
@@ -148,7 +148,7 @@ func (ic *IbClient) startAPI() error {
 		start_api = makeMsg(int64(START_API), int64(v), ic.clientId)
 	}
 
-	fmt.Println("Start API:", start_api)
+	log.Println("Start API:", start_api)
 	if _, err := ic.writer.Write(start_api); err != nil {
 		return err
 	}
@@ -176,6 +176,8 @@ func (ic *IbClient) reset() {
 
 }
 
+// ---------------req func ----------------------------------------------
+
 func (ic *IbClient) reqCurrentTime() {
 	v := 1
 	msg := makeMsg(REQ_CURRENT_TIME, v)
@@ -183,6 +185,7 @@ func (ic *IbClient) reqCurrentTime() {
 	ic.reqChan <- msg
 }
 
+// reqAutoOpenOrders will make the client access to the TWS Orders (only if clientId=0)
 func (ic *IbClient) reqAutoOpenOrders(autoBind bool) {
 	v := 1
 	msg := makeMsg(REQ_AUTO_OPEN_ORDERS, v, autoBind)
@@ -190,9 +193,19 @@ func (ic *IbClient) reqAutoOpenOrders(autoBind bool) {
 	ic.reqChan <- msg
 }
 
+func (ic *IbClient) reqAccountUpdates(subscribe bool, accName string) {
+	v := 2
+	msg := makeMsg(REQ_ACCT_DATA, v, subscribe, accName)
+
+	ic.reqChan <- msg
+
+}
+
+//--------------------------three major goroutine -----------------------------------------------------
 //goRequest will get the req from reqChan and send it to TWS
 func (ic *IbClient) goRequest() {
-	fmt.Println("Start goRequest!")
+	log.Println("Start goRequest!")
+	defer log.Println("End goRequest!")
 	defer ic.wg.Done()
 requestLoop:
 	for {
@@ -210,14 +223,14 @@ requestLoop:
 		}
 	}
 
-	fmt.Println("End goRequest!")
 }
 
 //goReceive receive the msg from the socket, get the fields and put them into msgChan
 func (ic *IbClient) goReceive() {
 	// defer
-	fmt.Println("Start goReceive!")
+	log.Println("Start goReceive!")
 	// buf := make([]byte, 0, 4096)
+	defer log.Println("End goReceive!")
 	defer ic.wg.Done()
 	for {
 		// buf := []byte
@@ -226,10 +239,10 @@ func (ic *IbClient) goReceive() {
 			if !err.Temporary() {
 				break
 			}
-			fmt.Println(err)
+			log.Println(err)
 		} else if err != nil {
 			ic.errChan <- err
-			fmt.Println("readmsgBuf Error:", err)
+			log.Println("readmsgBuf Error:", err)
 			ic.reader.Reset(ic.conn)
 		}
 
@@ -237,12 +250,12 @@ func (ic *IbClient) goReceive() {
 		ic.msgChan <- fields
 
 	}
-	fmt.Println("End goReceive!")
 }
 
 //goDecode decode the fields received from the msgChan
 func (ic *IbClient) goDecode() {
-	fmt.Println("Start goDecode!")
+	log.Println("Start goDecode!")
+	defer log.Println("End goDecode!")
 	defer ic.wg.Done()
 
 decodeLoop:
@@ -251,18 +264,18 @@ decodeLoop:
 		select {
 		case f := <-ic.msgChan:
 			ic.decoder.interpret(f...)
-			fmt.Println(f)
+			// log.Println(f)
 		case <-ic.terminatedSignal:
 			// fmt.Println("goDecode terminate")
 			break decodeLoop
 		}
 	}
-	fmt.Println("End goDecode!")
 
 }
 
+// ---------------------------------------------------------------------------------------
 func (ic *IbClient) Run() {
-	fmt.Println("setup receiver")
+	log.Println("setup receiver")
 	ic.wg.Add(3)
 	go ic.goRequest()
 	go ic.goReceive()
