@@ -183,9 +183,17 @@ func (ic *IbClient) reqCurrentTime() {
 	ic.reqChan <- msg
 }
 
+func (ic *IbClient) reqAutoOpenOrders(autoBind bool) {
+	v := 1
+	msg := makeMsg(REQ_AUTO_OPEN_ORDERS, v, autoBind)
+
+	ic.reqChan <- msg
+}
+
 //goRequest will get the req from reqChan and send it to TWS
 func (ic *IbClient) goRequest() {
 	fmt.Println("Start goRequest!")
+	defer ic.wg.Done()
 requestLoop:
 	for {
 		select {
@@ -201,7 +209,7 @@ requestLoop:
 			break requestLoop
 		}
 	}
-	ic.wg.Done()
+
 	fmt.Println("End goRequest!")
 }
 
@@ -210,6 +218,7 @@ func (ic *IbClient) goReceive() {
 	// defer
 	fmt.Println("Start goReceive!")
 	// buf := make([]byte, 0, 4096)
+	defer ic.wg.Done()
 	for {
 		// buf := []byte
 		msgBuf, err := readMsgBuf(ic.reader)
@@ -228,13 +237,14 @@ func (ic *IbClient) goReceive() {
 		ic.msgChan <- fields
 
 	}
-	ic.wg.Done()
 	fmt.Println("End goReceive!")
 }
 
 //goDecode decode the fields received from the msgChan
 func (ic *IbClient) goDecode() {
 	fmt.Println("Start goDecode!")
+	defer ic.wg.Done()
+
 decodeLoop:
 	for {
 		// buf := []byte
@@ -247,7 +257,6 @@ decodeLoop:
 			break decodeLoop
 		}
 	}
-	ic.wg.Done()
 	fmt.Println("End goDecode!")
 
 }

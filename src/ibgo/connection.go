@@ -1,11 +1,15 @@
+/* connection handle the */
+
 package ibgo
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 )
 
+// ConnectionState
 const (
 	DISCONNECTED = iota
 	CONNECTING
@@ -97,13 +101,13 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 	server := ibconn.host + ":" + strconv.Itoa(port)
 	addr, err = net.ResolveTCPAddr("tcp4", server)
 	if err != nil {
-		fmt.Println("ResolveTCPAddr Error:", err)
+		log.Printf("ResolveTCPAddr Error: %v", err)
 		return err
 	}
 
 	ibconn.conn, err = net.DialTCP("tcp4", nil, addr)
 	if err != nil {
-		fmt.Println("DialTCP Error:", err)
+		log.Printf("DialTCP Error: %v", err)
 		return err
 	}
 

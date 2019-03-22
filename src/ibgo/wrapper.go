@@ -6,10 +6,13 @@ import (
 )
 
 type IbWrapper interface {
-	nextValidId(reqId int)
+	tickPrice(reqId int64, tickType int64, price float64, attrib TickAttrib)
+	tickSize(reqId int64, tickType int64, size int64)
+	orderStatus(orderId int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64)
+	nextValidId(reqId int64)
 	managedAccounts(accountsList []Account)
 	connectAck()
-	error(reqId int, errCode int, errString string)
+	error(reqId int64, errCode int64, errString string)
 	currentTime(t time.Time)
 }
 
@@ -21,14 +24,18 @@ func (w Wrapper) connectAck() {
 
 }
 
-func (w Wrapper) nextValidId(reqId int) {
-	fmt.Println("nextValidId:", reqId)
+func (w Wrapper) nextValidId(reqId int64) {
+	fmt.Printf("nextValidId: %v\n", reqId)
 
 }
 
 func (w Wrapper) managedAccounts(accountsList []Account) {
-	fmt.Println("managedAccounts:", accountsList)
+	fmt.Printf("managedAccounts: %v\n", accountsList)
 
+}
+
+func (w Wrapper) tickPrice(reqId int64, tickType int64, price float64, attrib TickAttrib) {
+	fmt.Printf("reqId: %v tickType: %v price: %v\n", reqId, tickType, price)
 }
 
 func (w *Wrapper) updateAccountTime(timestamp time.Time) {
@@ -79,8 +86,8 @@ func (w *Wrapper) openOrder() {
 func (w *Wrapper) openOrderEnd() {
 
 }
-func (w *Wrapper) orderStatus() {
-
+func (w Wrapper) orderStatus(orderId int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64) {
+	fmt.Printf("orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v\n", orderId, status, filled, remaining, avgFillPrice)
 }
 func (w *Wrapper) execDetails() {
 
@@ -133,7 +140,8 @@ func (w *Wrapper) historicalTicksLast() {
 func (w *Wrapper) priceSizeTick() {
 
 }
-func (w *Wrapper) tickSize() {
+func (w Wrapper) tickSize(reqId int64, tickType int64, size int64) {
+	fmt.Printf("reqId: %v tickType: %v size: %v\n", reqId, tickType, size)
 
 }
 func (w *Wrapper) tickSnapshotEnd() {
@@ -212,9 +220,9 @@ func (w *Wrapper) receiveFA() {
 
 }
 func (w Wrapper) currentTime(t time.Time) {
-
+	fmt.Printf("CurrentTime :%v\n", t)
 }
-func (w Wrapper) error(reqId int, errCode int, errString string) {
+func (w Wrapper) error(reqId int64, errCode int64, errString string) {
 	fmt.Printf("reqId: %v errCode: %v errString: %v\n", reqId, errCode, errString)
 
 }

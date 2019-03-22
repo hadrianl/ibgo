@@ -1,10 +1,13 @@
 package ibgo
 
 import (
-	"fmt"
+	"bytes"
 	"strconv"
-	"strings"
 	"time"
+)
+
+const (
+	TIME_FORMAT string = "2019-03-21 17:18:00 +0800 CST"
 )
 
 type IbDecoder struct {
@@ -60,55 +63,173 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 
 func (d *IbDecoder) setmsgId2process() {
 	d.msgId2process = map[IN]func([][]byte){
-
+		TICK_PRICE:    d.processTickPriceMsg,
+		TICK_SIZE:     d.wrapTickSize,
+		ORDER_STATUS:  d.processOrderStatusMsg,
+		ERR_MSG:       d.wrapError,
+		OPEN_ORDER:    d.processOpenOrder,
 		NEXT_VALID_ID: d.wrapNextValidId,
 		MANAGED_ACCTS: d.wrapManagedAccounts,
-		ERR_MSG:       d.wrapError,
-		CURRENT_TIME:  d.wrapCurrentTime,
+
+		CURRENT_TIME: d.wrapCurrentTime,
 	}
 
 }
 
+func (d *IbDecoder) wrapTickSize(f [][]byte) {
+	reqId := decodeInt(f[1])
+	tickType := decodeInt(f[2])
+	size := decodeInt(f[3])
+	d.wrapper.tickSize(reqId, tickType, size)
+}
+
 func (d *IbDecoder) wrapNextValidId(f [][]byte) {
-	reqId, _ := strconv.Atoi(string(f[1]))
+	reqId := decodeInt(f[1])
 	d.wrapper.nextValidId(reqId)
 
 }
 
 func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
-	accNames := strings.Split(string(f[1]), ",")
+	// accNames := strings.Split(string(f[1]), ",")
+	accNameField := bytes.Split(f[1], []byte{','})
 
 	accsList := []Account{}
-	for _, acc := range accNames {
-		accsList = append(accsList, Account{Name: acc})
+	for _, acc := range accNameField {
+		accsList = append(accsList, Account{Name: string(acc)})
 	}
 	d.wrapper.managedAccounts(accsList)
 
 }
 
 func (d *IbDecoder) wrapError(f [][]byte) {
-	reqId, _ := strconv.Atoi(string(f[1]))
-	errorCode, _ := strconv.Atoi(string(f[2]))
-	errorString := string(f[3])
+	reqId := decodeInt(f[1])
+	errorCode := decodeInt(f[2])
+	errorString := decodeString(f[3])
 
 	d.wrapper.error(reqId, errorCode, errorString)
 }
 
 func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
-	ts, _ := strconv.ParseInt(string(f[1]), 10, 64)
+	ts := decodeInt(f[1])
 	t := time.Unix(ts, 0)
-	fmt.Printf("CurrentTime :%v", t)
+
+	d.wrapper.currentTime(t)
 }
 
 func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
+	reqId := decodeInt(f[1])
+	tickType := decodeInt(f[2])
+	price := decodeFloat(f[3])
+	size := decodeInt(f[4])
+	attrMask := decodeInt(f[5])
+
+	attrib := TickAttrib{}
+	attrib.CanAutoExecute = attrMask == 1
+
+	if d.version >= MIN_SERVER_VER_PAST_LIMIT {
+		attrib.CanAutoExecute = attrMask&0x1 != 0
+		attrib.PastLimit = attrMask&0x2 != 0
+		if d.version >= MIN_SERVER_VER_PRE_OPEN_BID_ASK {
+			attrib.PreOpen = attrMask&0x4 != 0
+		}
+	}
+
+	d.wrapper.tickPrice(reqId, tickType, price, attrib)
+
+	var sizeTickType int64
+	switch tickType {
+	case BID:
+		sizeTickType = BID_SIZE
+	case ASK:
+		sizeTickType = ASK_SIZE
+	case LAST:
+		sizeTickType = LAST_SIZE
+	case DELAYED_BID:
+		sizeTickType = DELAYED_BID_SIZE
+	case DELAYED_ASK:
+		sizeTickType = DELAYED_ASK_SIZE
+	case DELAYED_LAST:
+		sizeTickType = DELAYED_LAST_SIZE
+	default:
+		sizeTickType = NOT_SET
+	}
+
+	if sizeTickType != NOT_SET {
+		d.wrapper.tickSize(reqId, sizeTickType, size)
+	}
 
 }
 
 func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
+	if d.version < MIN_SERVER_VER_MARKET_CAP_PRICE {
+		f = f[1:]
+	}
+	orderId := decodeInt(f[0])
+	status := decodeString(f[1])
+
+	filled := decodeFloat(f[2])
+
+	remaining := decodeFloat(f[3])
+
+	avgFilledPrice := decodeFloat(f[4])
+
+	permId := decodeInt(f[5])
+	parentId := decodeInt(f[6])
+	lastFillPrice := decodeFloat(f[7])
+	clientId := decodeInt(f[8])
+	whyHeld := decodeString(f[9])
+
+	var mktCapPrice float64
+	if d.version >= MIN_SERVER_VER_MARKET_CAP_PRICE {
+		mktCapPrice = decodeFloat(f[10])
+	} else {
+		mktCapPrice = float64(0)
+	}
+
+	d.wrapper.orderStatus(orderId, status, filled, remaining, avgFilledPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)
 
 }
 
 func (d *IbDecoder) processOpenOrder(f [][]byte) {
+
+	var version int64
+	if d.version < MIN_SERVER_VER_ORDER_CONTAINER {
+		version = decodeInt(f[0])
+		f = f[1:]
+	} else {
+		version = int64(d.version)
+	}
+
+	o := &Order{}
+	o.OrderId = decodeInt(f[0])
+
+	c := &Contract{}
+
+	c.ContractId = decodeInt(f[1])
+	c.Symbol = decodeString(f[2])
+	c.SecurityType = decodeString(f[3])
+	if t, err := time.Parse(TIME_FORMAT, decodeString(f[4])); err == nil {
+		c.Expiry = t
+	}
+	c.Strike = decodeFloat(f[5])
+	c.Right = decodeString(f[6])
+
+	if version >= 32 {
+		c.Multiplier = decodeString(f[7])
+		f = f[1:]
+	}
+	c.Exchange = decodeString(f[7])
+	c.Currency = decodeString(f[8])
+	c.LocalSymbol = decodeString(f[9])
+	if version >= 32 {
+		c.TradingClass = decodeString(f[10])
+		f = f[1:]
+	}
+
+	o.Action = decodeString(f[10])
+	o.TotalQuantity = decodeFloat(f[11])
+	o.OrderType = decodeString(f[12])
+	o.LmtPrice = decodeFloat(f[13])
 
 }
 func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {

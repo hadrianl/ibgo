@@ -10,7 +10,7 @@ import (
 func TestClient(t *testing.T) {
 	var err error
 	ic := &IbClient{}
-	err = ic.Connect("127.0.0.1", 7497, 10)
+	err = ic.Connect("127.0.0.1", 7497, 0)
 	if err != nil {
 		fmt.Println("Connect failed:", err)
 		return
@@ -23,6 +23,7 @@ func TestClient(t *testing.T) {
 	}
 
 	ic.reqCurrentTime()
+	ic.reqAutoOpenOrders(true)
 
 	ic.Run()
 	time.Sleep(time.Second * 10)

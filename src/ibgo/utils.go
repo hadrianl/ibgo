@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -55,36 +56,25 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 }
 
 func makeMsgBuf(msg interface{}) []byte {
-	return append([]byte(fmt.Sprint(msg)), '\x00')
-	// switch msg.(type) {
-	// case string:
-	// 	bs := []byte(msg.(string))
-	// 	return append(bs, '\x00')
+	var b []byte
 
-	// case int64:
-	// 	bs := make([]byte, 8)
-	// 	binary.BigEndian.PutUint64(bs, uint64(msg.(int64)))
-	// 	return append(bs, '\x00')
-	// case float64:
-	// 	bs := make([]byte, 8)
-	// 	bits := math.Float64bits(msg.(float64))
-	// 	binary.LittleEndian.PutUint64(bs, bits)
-	// 	return append(bs, '\x00')
-	// case []byte:
-	// 	return append(msg.([]byte), '\x00')
-	// 	// case bool:
-	// 	// 	var s string
-	// 	// 	if msg {
-	// 	// 		s = "1"
-	// 	// 	}else {
-	// 	// 		s = "0"
-	// 	// 	}
-	// 	// 	_, err := b.WriteString(s)
-	// 	// case time.Time:
-	// 	// 	t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
-	// 	// 	_, err := b.WriteString(t_string)
-	// }
-	// return nil
+	switch msg.(type) {
+	case int64:
+		b = encodeInt(msg.(int64))
+
+	case float64:
+		b = encodeFloat(msg.(float64))
+
+	case string:
+		b = encodeString(msg.(string))
+	case bool:
+		b = encodeBool(msg.(bool))
+
+	default:
+		panic("can't converst the param")
+	}
+
+	return append(b, '\x00')
 }
 
 func mergeMsgBuf(fields ...interface{}) []byte {
@@ -109,6 +99,43 @@ func splitMsgBuf(data []byte) [][]byte {
 	fields := bytes.Split(data, []byte(fieldSplit))
 	return fields[:len(fields)-1]
 
+}
+
+func decodeInt(field []byte) int64 {
+	i, _ := strconv.ParseInt(string(field), 10, 64)
+	return i
+}
+
+func decodeFloat(field []byte) float64 {
+	f, _ := strconv.ParseFloat(string(field), 64)
+	return f
+}
+
+func decodeString(field []byte) string {
+	return string(field)
+}
+
+func encodeInt(i int64) []byte {
+	bs := []byte(strconv.FormatInt(i, 10))
+	return bs
+}
+
+func encodeFloat(f float64) []byte {
+	bs := []byte(strconv.FormatFloat(f, 'g', 10, 64))
+	return bs
+}
+
+func encodeString(str string) []byte {
+	bs := []byte(str)
+	return bs
+}
+
+func encodeBool(b bool) []byte {
+	if b {
+		return []byte{'1'}
+	} else {
+		return []byte{'0'}
+	}
 }
 
 // func ibWrite(b *bytes.Buffer, msg interface{}) error {
