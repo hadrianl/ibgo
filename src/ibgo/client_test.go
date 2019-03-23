@@ -8,6 +8,7 @@ import (
 )
 
 func TestClient(t *testing.T) {
+
 	var err error
 	ic := &IbClient{}
 	err = ic.Connect("127.0.0.1", 7497, 0)

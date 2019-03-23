@@ -35,13 +35,23 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 	if _, err := reader.Read(sizeBuf); err != nil {
 		return nil, err
 	}
+	// log.Println("Get SizeBuf:", sizeBuf)
 	size := bytesToInt(sizeBuf)
 	log.Println("Get SizeBuf:", size)
 
 	msgBuf := make([]byte, size)
 
-	if _, err := reader.Read(msgBuf); err != nil {
-		return nil, err
+	// HELP: maybe there is a better way to get fixed size of bytes
+	for n, r := 0, int(size); n < r; {
+		tempMsgBuf := make([]byte, r-n)
+		tn, err := reader.Read(tempMsgBuf)
+		if err != nil {
+			log.Panicf("errReadMsg: %v", err)
+		}
+
+		copy(msgBuf[n:n+tn], tempMsgBuf)
+		n += tn
+
 	}
 
 	return msgBuf, nil
