@@ -49,7 +49,7 @@ type Order struct {
 	// ---------------------------------
 	// ------- SMART routing only ------
 	DiscretionaryAmount float64
-	ETradeOnly          int64
+	ETradeOnly          bool
 	FirmQuoteOnly       bool
 	NBBOPriceCap        float64
 	OptOutSmartRouting  bool
@@ -89,17 +89,18 @@ type Order struct {
 	BasisPointsType int64   // EFP orders only
 	// -----------------------------------
 	//-----------SCALE ORDERS ONLY------------
-	ScaleInitLevelSize       int64
-	ScaleSubsLevelSize       int64
-	ScalePriceIncrement      float64
-	ScalePriceAdjustValue    float64
-	ScalePriceAdjustInterval int64
-	ScaleProfitOffset        float64
-	ScaleAutoReset           bool
-	ScaleInitPosition        int64
-	ScaleInitFillQty         int64
-	ScaleRandomPercent       bool
-	ScaleTable               string
+	ScaleInitLevelSize        int64
+	ScaleSubsLevelSize        int64
+	ScalePriceIncrement       float64
+	ScalePriceAdjustValue     float64
+	ScalePriceAdjustInterval  int64
+	ScaleProfitOffset         float64
+	ScaleAutoReset            bool
+	ScaleInitPosition         int64
+	ScaleInitFillQty          int64
+	ScaleRandomPercent        bool
+	ScaleTable                string
+	NotSuppScaleNumComponents int64
 	//--------------------------------------
 	// ---------HEDGE ORDERS--------------
 	HedgeType  string
@@ -114,7 +115,7 @@ type Order struct {
 	// --------- ALGO ORDERS ONLY --------------
 	AlgoStrategy string
 
-	AlgoParams              AlgoParams `when:"AlgoStrategy" cond:"is" value:""`
+	AlgoParams              []TagValue
 	SmartComboRoutingParams []TagValue
 	AlgoId                  string
 	// -----------------------------------------
@@ -133,7 +134,7 @@ type Order struct {
 	//----------------------------------------
 	//-----------VER PEG2BENCH fields----------
 	ReferenceContractId          int64
-	PeggedChangeAmount           int64
+	PeggedChangeAmount           float64
 	IsPeggedChangeAmountDecrease bool
 	ReferenceChangeAmount        float64
 	ReferenceExchangeId          string
@@ -145,7 +146,7 @@ type Order struct {
 	AdjustableTrailingUnit       int64
 	LmtPriceOffset               float64
 
-	Conditions            []interface{}
+	Conditions            []OrderCondition
 	ConditionsCancelOrder bool
 	ConditionsIgnoreRth   bool
 
@@ -167,4 +168,42 @@ type Order struct {
 	IsOmsContainer bool
 
 	DiscretionaryUpToLimitPrice bool
+
+	SoftDollarTier SoftDollarTier
+}
+
+type OrderState struct {
+	Status                  string
+	InitialMarginBefore     string
+	InitialMarginChange     string
+	InitialMarginAfter      string
+	MaintenanceMarginBefore string
+	MaintenanceMarginChange string
+	MaintenanceMarginAfter  string
+	EquityWithLoanBefore    string
+	EquityWithLoanChange    string
+	EquityWithLoanAfter     string
+	Commission              float64 // max
+	MinCommission           float64 // max
+	MaxCommission           float64 // max
+	CommissionCurrency      string
+	WarningText             string
+}
+
+type OrderCondition struct {
+	CondType                int64
+	IsConjunctionConnection bool
+
+	// Price = 1
+	// Time = 3
+	// Margin = 4
+	// Execution = 5
+	// Volume = 6
+	// PercentChange = 7
+}
+
+type SoftDollarTier struct {
+	Name        string
+	Value       string
+	DisplayName string
 }

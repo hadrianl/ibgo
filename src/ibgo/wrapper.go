@@ -1,6 +1,7 @@
 package ibgo
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
@@ -11,9 +12,15 @@ type IbWrapper interface {
 	orderStatus(orderId int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64)
 	nextValidId(reqId int64)
 	managedAccounts(accountsList []Account)
-	updateAccountValue(tag string, val float64, currency string, accName string)
+	updateAccountValue(tag string, val string, currency string, accName string)
+	updatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string)
+	updateAccountTime(accTime time.Time)
+	openOrder(orderId int64, contract *Contract, order *Order, orderState *OrderState)
 	connectAck()
 	error(reqId int64, errCode int64, errString string)
+
+	//wrap end
+	accountDownloadEnd(accName string)
 	currentTime(t time.Time)
 }
 
@@ -39,15 +46,17 @@ func (w Wrapper) tickPrice(reqId int64, tickType int64, price float64, attrib Ti
 	log.Printf("reqId: %v tickType: %v price: %v\n", reqId, tickType, price)
 }
 
-func (w *Wrapper) updateAccountTime(timestamp time.Time) {
+func (w Wrapper) updateAccountTime(accTime time.Time) {
+	log.Printf("updateAccountTime: %v", accTime)
 
 }
-func (w Wrapper) updateAccountValue(tag string, val float64, currency string, accName string) {
-	log.Printf("Account:%v <%v>:%v %v", accName, tag, val, currency)
+func (w Wrapper) updateAccountValue(tag string, val string, currency string, accName string) {
+	log.Printf("Account:%v <%v>:%v currency:%v", accName, tag, val, currency)
 
 }
 
-func (w *Wrapper) accountDownloadEnd(_account Account) {
+func (w Wrapper) accountDownloadEnd(accName string) {
+	log.Printf("accountDownloadEnd: %v", accName)
 
 }
 
@@ -67,8 +76,8 @@ func (w *Wrapper) accountSummaryEnd() {
 
 }
 
-func (w *Wrapper) updatePortfolio() {
-
+func (w Wrapper) updatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string) {
+	log.Printf("contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
 }
 func (w *Wrapper) position() {
 
@@ -82,7 +91,8 @@ func (w *Wrapper) pnl() {
 func (w *Wrapper) pnlSingle() {
 
 }
-func (w *Wrapper) openOrder() {
+func (w Wrapper) openOrder(orderId int64, contract *Contract, order *Order, orderState *OrderState) {
+	fmt.Printf("orderId: %v contract: %v order: %v orderState: %v", orderId, contract, order, orderState)
 
 }
 func (w *Wrapper) openOrderEnd() {

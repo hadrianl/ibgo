@@ -2,19 +2,22 @@ package ibgo
 
 import (
 	"bytes"
+	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"time"
 )
 
 const (
-	TIME_FORMAT string = "2019-03-21 17:18:00 +0800 CST"
+	TIME_FORMAT string = "2006-01-02 15:04:05 +0700 CST"
 )
 
 type IbDecoder struct {
 	wrapper       IbWrapper
 	version       Version
 	msgId2process map[IN]func([][]byte)
+	errChan       chan error
 }
 
 //NewIbDecoder create a decoder to decode the fileds based on version
@@ -22,6 +25,7 @@ func NewIbDecoder(wrapper IbWrapper, version Version) *IbDecoder {
 	decoder := IbDecoder{}
 	decoder.wrapper = wrapper
 	decoder.version = version
+	decoder.errChan = make(chan error, 30)
 	return &decoder
 }
 
@@ -33,6 +37,13 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 	if len(fs) == 0 {
 		return
 	}
+
+	// if decode error ocours,handle the error
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("!!!!!!errDeocde!!!!!!->%v", err)
+		}
+	}()
 
 	MsgId, _ := strconv.ParseInt(string(fs[0]), 10, 64)
 	if processer, ok := d.msgId2process[IN(MsgId)]; ok {
@@ -68,16 +79,19 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 
 func (d *IbDecoder) setmsgId2process() {
 	d.msgId2process = map[IN]func([][]byte){
-		TICK_PRICE:    d.processTickPriceMsg,
-		TICK_SIZE:     d.wrapTickSize,
-		ORDER_STATUS:  d.processOrderStatusMsg,
-		ERR_MSG:       d.wrapError,
-		OPEN_ORDER:    d.processOpenOrder,
-		ACCT_VALUE:    d.wrapUpdateAccountValue,
-		NEXT_VALID_ID: d.wrapNextValidId,
-		MANAGED_ACCTS: d.wrapManagedAccounts,
+		TICK_PRICE:       d.processTickPriceMsg,
+		TICK_SIZE:        d.wrapTickSize,
+		ORDER_STATUS:     d.processOrderStatusMsg,
+		ERR_MSG:          d.wrapError,
+		OPEN_ORDER:       d.processOpenOrder,
+		ACCT_VALUE:       d.wrapUpdateAccountValue,
+		PORTFOLIO_VALUE:  d.processPortfolioValueMsg,
+		ACCT_UPDATE_TIME: d.wrapUpdateAccountTime,
+		NEXT_VALID_ID:    d.wrapNextValidId,
+		MANAGED_ACCTS:    d.wrapManagedAccounts,
 
-		CURRENT_TIME: d.wrapCurrentTime,
+		ACCT_DOWNLOAD_END: d.wrapAccountDownloadEnd,
+		CURRENT_TIME:      d.wrapCurrentTime,
 	}
 
 }
@@ -109,11 +123,24 @@ func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
 
 func (d *IbDecoder) wrapUpdateAccountValue(f [][]byte) {
 	tag := decodeString(f[1])
-	val := decodeFloat(f[2])
+	val := decodeString(f[2])
 	currency := decodeString(f[3])
 	accName := decodeString(f[4])
 
 	d.wrapper.updateAccountValue(tag, val, currency, accName)
+}
+
+func (d *IbDecoder) wrapUpdateAccountTime(f [][]byte) {
+	ts := string(f[1])
+	today := time.Now()
+	// time.
+	t, err := time.ParseInLocation("04:05", ts, time.Local)
+	if err != nil {
+		panic(err)
+	}
+	t = t.AddDate(today.Year(), int(today.Month())-1, today.Day()-1)
+
+	d.wrapper.updateAccountTime(t)
 }
 
 func (d *IbDecoder) wrapError(f [][]byte) {
@@ -130,6 +157,16 @@ func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
 
 	d.wrapper.currentTime(t)
 }
+
+//--------------wrap end func ---------------------------------
+
+func (d *IbDecoder) wrapAccountDownloadEnd(f [][]byte) {
+	accName := string(f[1])
+
+	d.wrapper.accountDownloadEnd(accName)
+}
+
+// ------------------------------------------------------------------
 
 func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
 	reqId := decodeInt(f[1])
@@ -227,6 +264,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	if t, err := time.Parse(TIME_FORMAT, decodeString(f[4])); err == nil {
 		c.Expiry = t
 	}
+
 	c.Strike = decodeFloat(f[5])
 	c.Right = decodeString(f[6])
 
@@ -245,10 +283,347 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	o.Action = decodeString(f[10])
 	o.TotalQuantity = decodeFloat(f[11])
 	o.OrderType = decodeString(f[12])
-	o.LmtPrice = decodeFloat(f[13])
+	o.LmtPrice = decodeFloat(f[13]) //todo: show_unset
+	o.AuxPrice = decodeFloat(f[14]) //todo: show_unset
+	o.Tif = decodeString(f[15])
+	o.OCAGroup = decodeString(f[16])
+	o.Account = decodeString(f[17])
+	o.OpenClose = decodeString(f[18])
+
+	o.Origin = decodeInt(f[19])
+
+	o.OrderRef = decodeString(f[20])
+	o.ClientId = decodeInt(f[21])
+	o.PermId = decodeInt(f[22])
+
+	o.OutsideRTH = decodeBool(f[23])
+	o.Hidden = decodeBool(f[24])
+	o.DiscretionaryAmount = decodeFloat(f[25])
+	o.GoodAfterTime = decodeTime(f[26], "20060102")
+
+	_ = decodeString(f[27]) //_sharesAllocation
+
+	o.FAGroup = decodeString(f[28])
+	o.FAMethod = decodeString(f[29])
+	o.FAPercentage = decodeString(f[30])
+	o.FAProfile = decodeString(f[31])
+	o.GoodTillDate = decodeTime(f[32], "20060102")
+
+	o.Rule80A = decodeString(f[33])
+	o.PercentOffset = decodeFloat(f[34]) //show_unset
+	o.SettlingFirm = decodeString(f[35])
+	o.ShortSaleSlot = decodeInt(f[36])
+	o.DesignatedLocation = decodeString(f[37])
+
+	if d.version == MIN_SERVER_VER_SSHORTX_OLD {
+		f = f[1:]
+	} else if version >= 23 {
+		o.ExemptCode = decodeInt(f[38])
+		f = f[1:]
+	}
+
+	o.AuctionStrategy = decodeInt(f[38])
+	o.StartingPrice = decodeFloat(f[39])   //show_unset
+	o.StockRefPrice = decodeFloat(f[40])   //show_unset
+	o.Delta = decodeFloat(f[41])           //show_unset
+	o.StockRangeLower = decodeFloat(f[42]) //show_unset
+	o.StockRangeUpper = decodeFloat(f[43]) //show_unset
+	o.DisplaySize = decodeInt(f[44])
+
+	o.BlockOrder = decodeBool(f[45])
+	o.SweepToFill = decodeBool(f[46])
+	o.AllOrNone = decodeBool(f[47])
+	o.MinQty = decodeInt(f[48]) //show_unset
+	o.OCAType = decodeInt(f[49])
+	o.ETradeOnly = decodeBool(f[50])
+	o.FirmQuoteOnly = decodeBool(f[51])
+	o.NBBOPriceCap = decodeFloat(f[52]) //show_unset
+
+	o.ParentID = decodeInt(f[53])
+	o.TriggerMethod = decodeInt(f[54])
+
+	o.Volatility = decodeFloat(f[55]) //show_unset
+	o.VolatilityType = decodeInt(f[56])
+	o.DeltaNeutralOrderType = decodeString(f[57])
+	o.DeltaNeutralAuxPrice = decodeFloat(f[58])
+
+	if version >= 27 && o.DeltaNeutralOrderType != "" {
+		o.DeltaNeutralConId = decodeInt(f[59])
+		o.DeltaNeutralSettlingFirm = decodeString(f[60])
+		o.DeltaNeutralClearingAccount = decodeString(f[61])
+		o.DeltaNeutralClearingIntent = decodeString(f[62])
+		f = f[4:]
+	}
+
+	if version >= 31 && o.DeltaNeutralOrderType != "" {
+		o.DeltaNeutralOpenClose = decodeString(f[59])
+		o.DeltaNeutralShortSale = decodeBool(f[60])
+		o.DeltaNeutralShortSaleSlot = decodeInt(f[61])
+		o.DeltaNeutralDesignatedLocation = decodeString(f[62])
+		f = f[4:]
+	}
+
+	o.ContinuousUpdate = decodeBool(f[59])
+
+	o.ReferencePriceType = decodeInt(f[60])
+
+	o.TrailStopPrice = decodeFloat(f[61])
+
+	if version >= 30 {
+		o.TrailingPercent = decodeFloat(f[62]) //show_unset
+		f = f[1:]
+	}
+
+	o.BasisPoints = decodeFloat(f[62])
+	o.BasisPointsType = decodeInt(f[63])
+	c.ComboLegsDescription = decodeString(f[64])
+
+	if version >= 29 {
+		c.ComboLegs = []ComboLeg{}
+		fmt.Println("comboLegsCount:", f[65])
+		for comboLegsCount := decodeInt(f[65]); comboLegsCount > 0 && comboLegsCount != math.MaxInt64; comboLegsCount-- {
+			fmt.Println("comboLegsCount:", comboLegsCount)
+			comboleg := ComboLeg{}
+			comboleg.ConId = decodeInt(f[66])
+			comboleg.Ratio = decodeInt(f[67])
+			comboleg.Action = decodeString(f[68])
+			comboleg.Exchange = decodeString(f[69])
+			comboleg.OpenClose = decodeInt(f[70])
+			comboleg.ShortSaleSlot = decodeInt(f[71])
+			comboleg.DesignatedLocation = decodeString(f[72])
+			comboleg.ExemptCode = decodeInt(f[73])
+			c.ComboLegs = append(c.ComboLegs, comboleg)
+			f = f[8:]
+		}
+
+		o.OrderComboLegs = []OrderComboLeg{}
+		for orderComboLegsCount := decodeInt(f[74]); orderComboLegsCount > 0 && orderComboLegsCount != math.MaxInt64; orderComboLegsCount-- {
+			orderComboLeg := OrderComboLeg{}
+			orderComboLeg.Price = decodeFloat(f[75])
+			o.OrderComboLegs = append(o.OrderComboLegs, orderComboLeg)
+			f = f[1:]
+		}
+		f = f[2:]
+	}
+
+	if version >= 26 {
+		o.SmartComboRoutingParams = []TagValue{}
+		for smartComboRoutingParamsCount := decodeInt(f[65]); smartComboRoutingParamsCount > 0 && smartComboRoutingParamsCount != math.MaxInt64; smartComboRoutingParamsCount-- {
+			tagValue := TagValue{}
+			tagValue.Tag = decodeString(f[66])
+			tagValue.Value = decodeString(f[67])
+			o.SmartComboRoutingParams = append(o.SmartComboRoutingParams, tagValue)
+			f = f[2:]
+		}
+
+		f = f[1:]
+	}
+
+	if version >= 20 {
+		o.ScaleInitLevelSize = decodeInt(f[65]) //show_unset
+		o.ScaleSubsLevelSize = decodeInt(f[66]) //show_unset
+	} else {
+		o.NotSuppScaleNumComponents = decodeInt(f[65])
+		o.ScaleInitLevelSize = decodeInt(f[66])
+	}
+
+	o.ScalePriceIncrement = decodeFloat(f[67])
+
+	if version >= 28 && o.ScalePriceIncrement != math.MaxFloat64 && o.ScalePriceIncrement > 0.0 {
+		o.ScalePriceAdjustValue = decodeFloat(f[68])
+		o.ScalePriceAdjustInterval = decodeInt(f[69])
+		o.ScaleProfitOffset = decodeFloat(f[70])
+		o.ScaleAutoReset = decodeBool(f[71])
+		o.ScaleInitPosition = decodeInt(f[72])
+		o.ScaleInitFillQty = decodeInt(f[73])
+		o.ScaleRandomPercent = decodeBool(f[74])
+		f = f[7:]
+	}
+
+	if version >= 24 {
+		o.HedgeType = decodeString(f[68])
+		if o.HedgeType != "" {
+			o.HedgeParam = decodeString(f[69])
+			f = f[1:]
+		}
+		f = f[1:]
+	}
+
+	if version >= 25 {
+		o.OptOutSmartRouting = decodeBool(f[68])
+		f = f[1:]
+	}
+
+	if version >= 22 {
+		o.NotHeld = decodeBool(f[68])
+		f = f[1:]
+	}
+
+	if version >= 20 {
+		deltaNeutralContractPresent := decodeBool(f[68])
+		if deltaNeutralContractPresent {
+			c.DeltaNeutralContract = DeltaNeutralContract{}
+			c.DeltaNeutralContract.CondId = decodeInt(f[69])
+			c.DeltaNeutralContract.Delta = decodeFloat(f[70])
+			c.DeltaNeutralContract.Price = decodeFloat(f[71])
+			f = f[3:]
+		}
+		f = f[1:]
+	}
+
+	if version >= 21 {
+		o.AlgoStrategy = decodeString(f[68])
+		if o.AlgoStrategy != "" {
+			o.AlgoParams = []TagValue{}
+			for algoParamsCount := decodeInt(f[69]); algoParamsCount > 0 && algoParamsCount != math.MaxInt64; algoParamsCount-- {
+				tagValue := TagValue{}
+				tagValue.Tag = decodeString(f[70])
+				tagValue.Value = decodeString(f[71])
+				o.AlgoParams = append(o.AlgoParams, tagValue)
+				f = f[2:]
+			}
+		}
+		f = f[1:]
+	}
+
+	if version >= 33 {
+		o.Solictied = decodeBool(f[68])
+	}
+
+	orderState := &OrderState{}
+
+	o.WhatIf = decodeBool(f[68])
+
+	orderState.Status = decodeString(f[69])
+
+	if d.version >= MIN_SERVER_VER_WHAT_IF_EXT_FIELDS {
+		orderState.InitialMarginBefore = decodeString(f[70])
+		orderState.MaintenanceMarginBefore = decodeString(f[71])
+		orderState.EquityWithLoanBefore = decodeString(f[72])
+		orderState.InitialMarginChange = decodeString(f[73])
+		orderState.MaintenanceMarginChange = decodeString(f[74])
+		orderState.EquityWithLoanChange = decodeString(f[75])
+		f = f[6:]
+	}
+
+	orderState.InitialMarginAfter = decodeString(f[70])
+	orderState.MaintenanceMarginAfter = decodeString(f[71])
+	orderState.EquityWithLoanAfter = decodeString(f[72])
+
+	orderState.Commission = decodeFloat(f[73])
+	orderState.MinCommission = decodeFloat(f[74])
+	orderState.MaxCommission = decodeFloat(f[75])
+	orderState.WarningText = decodeString(f[76])
+
+	if version >= 34 {
+		o.RandomizeSize = decodeBool(f[77])
+		o.RandomizePrice = decodeBool(f[78])
+		f = f[2:]
+	}
+
+	if d.version >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
+		if o.OrderType == "PEG BENCH" {
+			o.ReferenceContractId = decodeInt(f[77])
+			o.IsPeggedChangeAmountDecrease = decodeBool(f[78])
+			o.PeggedChangeAmount = decodeFloat(f[79])
+			o.ReferenceChangeAmount = decodeFloat(f[80])
+			o.ReferenceExchangeId = decodeString(f[81])
+			f = f[5:]
+		}
+
+		o.Conditions = []OrderCondition{}
+		for conditionsSize := decodeInt(f[77]); conditionsSize > 0; conditionsSize-- {
+			tagValue := TagValue{}
+			tagValue.Tag = decodeString(f[78])
+			tagValue.Value = decodeString(f[79])
+			o.AlgoParams = append(o.AlgoParams, tagValue)
+			f = f[2:]
+		}
+
+		o.ConditionsIgnoreRth = decodeBool(f[78])
+		o.ConditionsCancelOrder = decodeBool(f[79])
+
+		f = f[3:]
+	}
+
+	o.AdjustedOrderType = decodeString(f[77])
+	o.TriggerPrice = decodeFloat(f[78])
+	o.TrailStopPrice = decodeFloat(f[79])
+	o.LmtPriceOffset = decodeFloat(f[80])
+	o.AdjustedStopPrice = decodeFloat(f[81])
+	o.AdjustedTrailingAmount = decodeFloat(f[82])
+	o.AdjustableTrailingUnit = decodeInt(f[83])
+
+	if d.version >= MIN_SERVER_VER_SOFT_DOLLAR_TIER {
+		name := decodeString(f[84])
+		value := decodeString(f[85])
+		displayName := decodeString(f[86])
+		o.SoftDollarTier = SoftDollarTier{name, value, displayName}
+		f = f[3:]
+	}
+
+	if d.version >= MIN_SERVER_VER_CASH_QTY {
+		o.CashQty = decodeFloat(f[84])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE {
+		o.DontUseAutoPriceForHedge = decodeBool(f[84])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_ORDER_CONTAINER {
+		o.IsOmsContainer = decodeBool(f[84])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_D_PEG_ORDERS {
+		o.DiscretionaryUpToLimitPrice = decodeBool(f[84])
+		f = f[1:]
+	}
+
+	d.wrapper.openOrder(o.OrderId, c, o, orderState)
 
 }
+
 func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {
+	v := decodeInt(f[0])
+
+	c := &Contract{}
+	c.ContractId = decodeInt(f[1])
+	c.Symbol = decodeString(f[2])
+	c.SecurityType = decodeString(f[3])
+	c.Expiry = decodeDate(f[4])
+	c.Strike = decodeFloat(f[5])
+	c.Right = decodeString(f[6])
+
+	if v >= 7 {
+		c.Multiplier = decodeString(f[7])
+		c.PrimaryExchange = decodeString(f[8])
+		f = f[2:]
+	}
+
+	c.Currency = decodeString(f[7])
+	c.LocalSymbol = decodeString(f[8])
+
+	if v >= 8 {
+		c.TradingClass = decodeString(f[9])
+		f = f[1:]
+	}
+
+	position := decodeFloat(f[9])
+	marketPrice := decodeFloat(f[10])
+	marketValue := decodeFloat(f[11])
+	averageCost := decodeFloat(f[12])
+	unrealizedPNL := decodeFloat(f[13])
+	realizedPNL := decodeFloat(f[14])
+	accName := decodeString(f[15])
+
+	if v == 6 && d.version == 39 {
+		c.PrimaryExchange = decodeString(f[16])
+	}
+
+	d.wrapper.updatePortfolio(c, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accName)
 
 }
 func (d *IbDecoder) processContractDataMsg(f [][]byte) {

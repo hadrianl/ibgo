@@ -13,7 +13,7 @@ func TestClient(t *testing.T) {
 	ic := &IbClient{}
 	err = ic.Connect("127.0.0.1", 7497, 0)
 	if err != nil {
-		log.Println("Connect failed:", err)
+		log.Panic("Connect failed:", err)
 		return
 	}
 

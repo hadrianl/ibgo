@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -96,8 +97,8 @@ func (ic *IbClient) HandShake() error {
 	log.Println("Try to handShake with TWS or GateWay...")
 	var msg bytes.Buffer
 	head := []byte("API\x00")
-	minVer := []byte("100")
-	maxVer := []byte("148")
+	minVer := []byte(strconv.FormatInt(int64(MIN_CLIENT_VER), 10))
+	maxVer := []byte(strconv.FormatInt(int64(MAX_CLIENT_VER), 10))
 	connectOptions := []byte("")
 	clientVersion := bytes.Join([][]byte{[]byte("v"), minVer, []byte(".."), maxVer, connectOptions}, []byte(""))
 	sizeofCV := make([]byte, 4)
@@ -242,12 +243,13 @@ func (ic *IbClient) goReceive() {
 			log.Println(err)
 		} else if err != nil {
 			ic.errChan <- err
-			log.Println("readmsgBuf Error:", err)
 			ic.reader.Reset(ic.conn)
 		}
 
-		fields := splitMsgBuf(msgBuf)
-		ic.msgChan <- fields
+		if msgBuf != nil {
+			fields := splitMsgBuf(msgBuf)
+			ic.msgChan <- fields
+		}
 
 	}
 }
@@ -265,6 +267,8 @@ decodeLoop:
 		case f := <-ic.msgChan:
 			ic.decoder.interpret(f...)
 			// log.Println(f)
+		case e := <-ic.errChan:
+			fmt.Println(e)
 		case <-ic.terminatedSignal:
 			// fmt.Println("goDecode terminate")
 			break decodeLoop

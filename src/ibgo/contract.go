@@ -23,4 +23,12 @@ type Contract struct {
 	ComboLegsDescription string
 	ComboLegs            []ComboLeg
 	// UnderComp            *UnderComp
+
+	DeltaNeutralContract DeltaNeutralContract
+}
+
+type DeltaNeutralContract struct {
+	CondId int64
+	Delta  float64
+	Price  float64
 }

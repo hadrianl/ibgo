@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"log"
+	"math"
 	"strconv"
 	"time"
 )
@@ -46,7 +47,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 		tempMsgBuf := make([]byte, r-n)
 		tn, err := reader.Read(tempMsgBuf)
 		if err != nil {
-			log.Panicf("errReadMsg: %v", err)
+			return nil, err
 		}
 
 		copy(msgBuf[n:n+tn], tempMsgBuf)
@@ -109,17 +110,66 @@ func splitMsgBuf(data []byte) [][]byte {
 }
 
 func decodeInt(field []byte) int64 {
-	i, _ := strconv.ParseInt(string(field), 10, 64)
+	if bytes.Equal(field, []byte{}) {
+		return math.MaxInt64
+	}
+	i, err := strconv.ParseInt(string(field), 10, 64)
+	if err != nil {
+		log.Panicf("errDecodeInt: %v", err)
+	}
 	return i
 }
 
 func decodeFloat(field []byte) float64 {
-	f, _ := strconv.ParseFloat(string(field), 64)
+	if bytes.Equal(field, []byte{}) || bytes.Equal(field, []byte("None")) {
+		return math.MaxFloat64
+	}
+
+	f, err := strconv.ParseFloat(string(field), 64)
+	if err != nil {
+		log.Panicf("errDecodeFloat: %v", err)
+	}
+
 	return f
+}
+
+func decodeBool(field []byte) bool {
+
+	if bytes.Equal(field, []byte{'0'}) {
+		return false
+	} else {
+		return true
+	}
 }
 
 func decodeString(field []byte) string {
 	return string(field)
+}
+
+func decodeDate(field []byte) time.Time {
+	if len(field) != 8 {
+		return time.Time{}
+	}
+	tstring := string(field)
+	t, err := time.Parse("20060102", tstring)
+	if err != nil {
+		log.Printf("errDeocodeTime: %v  tstring: %v", err, tstring)
+		return time.Time{}
+	}
+
+	return t
+}
+
+func decodeTime(field []byte, layout string) time.Time {
+	if bytes.Equal(field, []byte{}) {
+		return time.Time{}
+	}
+
+	t, err := time.Parse(layout, string(field))
+	if err != nil {
+		log.Panicf("errDeocodeTime: %v  format: %v", field, layout)
+	}
+	return t
 }
 
 func encodeInt64(i int64) []byte {
