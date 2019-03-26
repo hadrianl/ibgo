@@ -135,7 +135,7 @@ func decodeFloat(field []byte) float64 {
 
 func decodeBool(field []byte) bool {
 
-	if bytes.Equal(field, []byte{'0'}) {
+	if bytes.Equal(field, []byte{'0'}) || bytes.Equal(field, []byte{}) {
 		return false
 	} else {
 		return true

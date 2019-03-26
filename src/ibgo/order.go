@@ -128,6 +128,9 @@ type Order struct {
 	Solictied bool
 	//--------------------------------------
 
+	// models
+	ModelCode string
+
 	// ------order combo legs -----------------
 	OrderComboLegs   []OrderComboLeg
 	OrderMiscOptions []TagValue

@@ -307,6 +307,12 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	o.FAMethod = decodeString(f[29])
 	o.FAPercentage = decodeString(f[30])
 	o.FAProfile = decodeString(f[31])
+
+	if d.version >= MIN_SERVER_VER_MODELS_SUPPORT {
+		o.ModelCode = decodeString(f[32])
+		f = f[1:]
+	}
+
 	o.GoodTillDate = decodeTime(f[32], "20060102")
 
 	o.Rule80A = decodeString(f[33])
@@ -395,15 +401,16 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 			c.ComboLegs = append(c.ComboLegs, comboleg)
 			f = f[8:]
 		}
+		f = f[1:]
 
 		o.OrderComboLegs = []OrderComboLeg{}
-		for orderComboLegsCount := decodeInt(f[74]); orderComboLegsCount > 0 && orderComboLegsCount != math.MaxInt64; orderComboLegsCount-- {
+		for orderComboLegsCount := decodeInt(f[65]); orderComboLegsCount > 0 && orderComboLegsCount != math.MaxInt64; orderComboLegsCount-- {
 			orderComboLeg := OrderComboLeg{}
-			orderComboLeg.Price = decodeFloat(f[75])
+			orderComboLeg.Price = decodeFloat(f[66])
 			o.OrderComboLegs = append(o.OrderComboLegs, orderComboLeg)
 			f = f[1:]
 		}
-		f = f[2:]
+		f = f[1:]
 	}
 
 	if version >= 26 {
@@ -454,31 +461,34 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 		f = f[1:]
 	}
 
+	o.ClearingAccount = decodeString(f[68])
+	o.ClearingIntent = decodeString(f[69])
+
 	if version >= 22 {
-		o.NotHeld = decodeBool(f[68])
+		o.NotHeld = decodeBool(f[70])
 		f = f[1:]
 	}
 
 	if version >= 20 {
-		deltaNeutralContractPresent := decodeBool(f[68])
+		deltaNeutralContractPresent := decodeBool(f[70])
 		if deltaNeutralContractPresent {
 			c.DeltaNeutralContract = DeltaNeutralContract{}
-			c.DeltaNeutralContract.CondId = decodeInt(f[69])
-			c.DeltaNeutralContract.Delta = decodeFloat(f[70])
-			c.DeltaNeutralContract.Price = decodeFloat(f[71])
+			c.DeltaNeutralContract.CondId = decodeInt(f[71])
+			c.DeltaNeutralContract.Delta = decodeFloat(f[72])
+			c.DeltaNeutralContract.Price = decodeFloat(f[73])
 			f = f[3:]
 		}
 		f = f[1:]
 	}
 
 	if version >= 21 {
-		o.AlgoStrategy = decodeString(f[68])
+		o.AlgoStrategy = decodeString(f[70])
 		if o.AlgoStrategy != "" {
 			o.AlgoParams = []TagValue{}
-			for algoParamsCount := decodeInt(f[69]); algoParamsCount > 0 && algoParamsCount != math.MaxInt64; algoParamsCount-- {
+			for algoParamsCount := decodeInt(f[71]); algoParamsCount > 0 && algoParamsCount != math.MaxInt64; algoParamsCount-- {
 				tagValue := TagValue{}
-				tagValue.Tag = decodeString(f[70])
-				tagValue.Value = decodeString(f[71])
+				tagValue.Tag = decodeString(f[72])
+				tagValue.Value = decodeString(f[73])
 				o.AlgoParams = append(o.AlgoParams, tagValue)
 				f = f[2:]
 			}
@@ -487,98 +497,102 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	if version >= 33 {
-		o.Solictied = decodeBool(f[68])
+		o.Solictied = decodeBool(f[70])
+		f = f[1:]
 	}
 
 	orderState := &OrderState{}
 
-	o.WhatIf = decodeBool(f[68])
+	o.WhatIf = decodeBool(f[70])
 
-	orderState.Status = decodeString(f[69])
+	orderState.Status = decodeString(f[71])
 
 	if d.version >= MIN_SERVER_VER_WHAT_IF_EXT_FIELDS {
-		orderState.InitialMarginBefore = decodeString(f[70])
-		orderState.MaintenanceMarginBefore = decodeString(f[71])
-		orderState.EquityWithLoanBefore = decodeString(f[72])
-		orderState.InitialMarginChange = decodeString(f[73])
-		orderState.MaintenanceMarginChange = decodeString(f[74])
-		orderState.EquityWithLoanChange = decodeString(f[75])
+		orderState.InitialMarginBefore = decodeString(f[72])
+		orderState.MaintenanceMarginBefore = decodeString(f[73])
+		orderState.EquityWithLoanBefore = decodeString(f[74])
+		orderState.InitialMarginChange = decodeString(f[75])
+		orderState.MaintenanceMarginChange = decodeString(f[76])
+		orderState.EquityWithLoanChange = decodeString(f[77])
 		f = f[6:]
 	}
 
-	orderState.InitialMarginAfter = decodeString(f[70])
-	orderState.MaintenanceMarginAfter = decodeString(f[71])
-	orderState.EquityWithLoanAfter = decodeString(f[72])
+	orderState.InitialMarginAfter = decodeString(f[72])
+	orderState.MaintenanceMarginAfter = decodeString(f[73])
+	orderState.EquityWithLoanAfter = decodeString(f[74])
 
-	orderState.Commission = decodeFloat(f[73])
-	orderState.MinCommission = decodeFloat(f[74])
-	orderState.MaxCommission = decodeFloat(f[75])
-	orderState.WarningText = decodeString(f[76])
+	orderState.Commission = decodeFloat(f[75])
+	orderState.MinCommission = decodeFloat(f[76])
+	orderState.MaxCommission = decodeFloat(f[77])
+	orderState.CommissionCurrency = decodeString(f[78])
+	orderState.WarningText = decodeString(f[79])
 
 	if version >= 34 {
-		o.RandomizeSize = decodeBool(f[77])
-		o.RandomizePrice = decodeBool(f[78])
+		o.RandomizeSize = decodeBool(f[80])
+		o.RandomizePrice = decodeBool(f[81])
 		f = f[2:]
 	}
 
 	if d.version >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
 		if o.OrderType == "PEG BENCH" {
-			o.ReferenceContractId = decodeInt(f[77])
-			o.IsPeggedChangeAmountDecrease = decodeBool(f[78])
-			o.PeggedChangeAmount = decodeFloat(f[79])
-			o.ReferenceChangeAmount = decodeFloat(f[80])
-			o.ReferenceExchangeId = decodeString(f[81])
+			o.ReferenceContractId = decodeInt(f[80])
+			o.IsPeggedChangeAmountDecrease = decodeBool(f[81])
+			o.PeggedChangeAmount = decodeFloat(f[82])
+			o.ReferenceChangeAmount = decodeFloat(f[83])
+			o.ReferenceExchangeId = decodeString(f[84])
 			f = f[5:]
 		}
 
 		o.Conditions = []OrderCondition{}
-		for conditionsSize := decodeInt(f[77]); conditionsSize > 0; conditionsSize-- {
-			tagValue := TagValue{}
-			tagValue.Tag = decodeString(f[78])
-			tagValue.Value = decodeString(f[79])
-			o.AlgoParams = append(o.AlgoParams, tagValue)
+		if conditionsSize := decodeInt(f[80]); conditionsSize > 0 && conditionsSize != math.MaxInt64 {
+			for ; conditionsSize > 0; conditionsSize-- {
+				tagValue := TagValue{}
+				tagValue.Tag = decodeString(f[81])
+				tagValue.Value = decodeString(f[82])
+				o.AlgoParams = append(o.AlgoParams, tagValue)
+				f = f[2:]
+			}
+			o.ConditionsIgnoreRth = decodeBool(f[81])
+			o.ConditionsCancelOrder = decodeBool(f[82])
 			f = f[2:]
 		}
 
-		o.ConditionsIgnoreRth = decodeBool(f[78])
-		o.ConditionsCancelOrder = decodeBool(f[79])
-
-		f = f[3:]
+		o.AdjustedOrderType = decodeString(f[81])
+		o.TriggerPrice = decodeFloat(f[82])
+		o.TrailStopPrice = decodeFloat(f[83])
+		o.LmtPriceOffset = decodeFloat(f[84])
+		o.AdjustedStopPrice = decodeFloat(f[85])
+		o.AdjustedStopLimitPrice = decodeFloat(f[86])
+		o.AdjustedTrailingAmount = decodeFloat(f[87])
+		o.AdjustableTrailingUnit = decodeInt(f[88])
+		f = f[9:]
 	}
 
-	o.AdjustedOrderType = decodeString(f[77])
-	o.TriggerPrice = decodeFloat(f[78])
-	o.TrailStopPrice = decodeFloat(f[79])
-	o.LmtPriceOffset = decodeFloat(f[80])
-	o.AdjustedStopPrice = decodeFloat(f[81])
-	o.AdjustedTrailingAmount = decodeFloat(f[82])
-	o.AdjustableTrailingUnit = decodeInt(f[83])
-
 	if d.version >= MIN_SERVER_VER_SOFT_DOLLAR_TIER {
-		name := decodeString(f[84])
-		value := decodeString(f[85])
-		displayName := decodeString(f[86])
+		name := decodeString(f[80])
+		value := decodeString(f[81])
+		displayName := decodeString(f[82])
 		o.SoftDollarTier = SoftDollarTier{name, value, displayName}
 		f = f[3:]
 	}
 
 	if d.version >= MIN_SERVER_VER_CASH_QTY {
-		o.CashQty = decodeFloat(f[84])
+		o.CashQty = decodeFloat(f[80])
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE {
-		o.DontUseAutoPriceForHedge = decodeBool(f[84])
+		o.DontUseAutoPriceForHedge = decodeBool(f[80])
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_ORDER_CONTAINER {
-		o.IsOmsContainer = decodeBool(f[84])
+		o.IsOmsContainer = decodeBool(f[80])
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_D_PEG_ORDERS {
-		o.DiscretionaryUpToLimitPrice = decodeBool(f[84])
+		o.DiscretionaryUpToLimitPrice = decodeBool(f[80])
 		f = f[1:]
 	}
 
