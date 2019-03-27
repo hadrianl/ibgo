@@ -203,7 +203,9 @@ func encodeBool(b bool) []byte {
 	}
 }
 
-func encodeTime(t)
+func encodeTime(t time.Time) []byte {
+	return []byte{} // TODO
+}
 
 // func ibWrite(b *bytes.Buffer, msg interface{}) error {
 // 	switch reflect.TypeOf(msg) {
