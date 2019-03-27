@@ -202,6 +202,21 @@ func (ic *IbClient) reqAccountUpdates(subscribe bool, accName string) {
 
 }
 
+func (ic *IbClient) reqExecutions(reqID int64, execFilter ExecutionFilter) {
+	v := 3
+	msg := makeMsg(REQ_EXECUTIONS, v)
+
+	if ic.serverVersion >= MIN_SERVER_VER_EXECUTION_DATA_CHAIN {
+		chain_msg := makeMsg(reqID)
+		msg = bytes.Join([][]byte{msg, chain_msg}, []byte{})
+	}
+
+	filter_msg := makeMsg(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
+	msg = bytes.Join([][]byte{msg, filter_msg}, []byte{})
+
+	ic.reqChan <- msg
+}
+
 //--------------------------three major goroutine -----------------------------------------------------
 //goRequest will get the req from reqChan and send it to TWS
 func (ic *IbClient) goRequest() {

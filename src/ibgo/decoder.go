@@ -88,6 +88,8 @@ func (d *IbDecoder) setmsgId2process() {
 		PORTFOLIO_VALUE:  d.processPortfolioValueMsg,
 		ACCT_UPDATE_TIME: d.wrapUpdateAccountTime,
 		NEXT_VALID_ID:    d.wrapNextValidId,
+		CONTRACT_DATA:    d.processContractDataMsg,
+		EXECUTION_DATA:   d.processExecutionDataMsg,
 		MANAGED_ACCTS:    d.wrapManagedAccounts,
 
 		ACCT_DOWNLOAD_END: d.wrapAccountDownloadEnd,
@@ -244,7 +246,6 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 
 func (d *IbDecoder) processOpenOrder(f [][]byte) {
 
-	log.Println("processOpenOrders:", f)
 	var version int64
 	if d.version < MIN_SERVER_VER_ORDER_CONTAINER {
 		version = decodeInt(f[0])
@@ -254,11 +255,11 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	o := &Order{}
-	o.OrderId = decodeInt(f[0])
+	o.OrderID = decodeInt(f[0])
 
 	c := &Contract{}
 
-	c.ContractId = decodeInt(f[1])
+	c.ContractID = decodeInt(f[1])
 	c.Symbol = decodeString(f[2])
 	c.SecurityType = decodeString(f[3])
 	if t, err := time.Parse(TIME_FORMAT, decodeString(f[4])); err == nil {
@@ -283,9 +284,9 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	o.Action = decodeString(f[10])
 	o.TotalQuantity = decodeFloat(f[11])
 	o.OrderType = decodeString(f[12])
-	o.LmtPrice = decodeFloat(f[13]) //todo: show_unset
-	o.AuxPrice = decodeFloat(f[14]) //todo: show_unset
-	o.Tif = decodeString(f[15])
+	o.LimitPrice = decodeFloat(f[13]) //todo: show_unset
+	o.AuxPrice = decodeFloat(f[14])   //todo: show_unset
+	o.TIF = decodeString(f[15])
 	o.OCAGroup = decodeString(f[16])
 	o.Account = decodeString(f[17])
 	o.OpenClose = decodeString(f[18])
@@ -293,8 +294,8 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	o.Origin = decodeInt(f[19])
 
 	o.OrderRef = decodeString(f[20])
-	o.ClientId = decodeInt(f[21])
-	o.PermId = decodeInt(f[22])
+	o.ClientID = decodeInt(f[21])
+	o.PermID = decodeInt(f[22])
 
 	o.OutsideRTH = decodeBool(f[23])
 	o.Hidden = decodeBool(f[24])
@@ -386,7 +387,6 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 
 	if version >= 29 {
 		c.ComboLegs = []ComboLeg{}
-		fmt.Println("comboLegsCount:", f[65])
 		for comboLegsCount := decodeInt(f[65]); comboLegsCount > 0 && comboLegsCount != math.MaxInt64; comboLegsCount-- {
 			fmt.Println("comboLegsCount:", comboLegsCount)
 			comboleg := ComboLeg{}
@@ -473,7 +473,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 		deltaNeutralContractPresent := decodeBool(f[70])
 		if deltaNeutralContractPresent {
 			c.DeltaNeutralContract = DeltaNeutralContract{}
-			c.DeltaNeutralContract.CondId = decodeInt(f[71])
+			c.DeltaNeutralContract.ContractID = decodeInt(f[71])
 			c.DeltaNeutralContract.Delta = decodeFloat(f[72])
 			c.DeltaNeutralContract.Price = decodeFloat(f[73])
 			f = f[3:]
@@ -535,22 +535,23 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 
 	if d.version >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
 		if o.OrderType == "PEG BENCH" {
-			o.ReferenceContractId = decodeInt(f[80])
+			o.ReferenceContractID = decodeInt(f[80])
 			o.IsPeggedChangeAmountDecrease = decodeBool(f[81])
 			o.PeggedChangeAmount = decodeFloat(f[82])
 			o.ReferenceChangeAmount = decodeFloat(f[83])
-			o.ReferenceExchangeId = decodeString(f[84])
+			o.ReferenceExchangeID = decodeString(f[84])
 			f = f[5:]
 		}
 
-		o.Conditions = []OrderCondition{}
+		o.Conditions = []OrderConditioner{}
 		if conditionsSize := decodeInt(f[80]); conditionsSize > 0 && conditionsSize != math.MaxInt64 {
 			for ; conditionsSize > 0; conditionsSize-- {
-				tagValue := TagValue{}
-				tagValue.Tag = decodeString(f[81])
-				tagValue.Value = decodeString(f[82])
-				o.AlgoParams = append(o.AlgoParams, tagValue)
-				f = f[2:]
+				conditionType := decodeInt(f[81])
+				cond, condSize := InitOrderCondition(conditionType)
+				cond.decode(f[82 : 82+condSize])
+
+				o.Conditions = append(o.Conditions, cond)
+				f = f[condSize+1:]
 			}
 			o.ConditionsIgnoreRth = decodeBool(f[81])
 			o.ConditionsCancelOrder = decodeBool(f[82])
@@ -596,7 +597,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 		f = f[1:]
 	}
 
-	d.wrapper.openOrder(o.OrderId, c, o, orderState)
+	d.wrapper.openOrder(o.OrderID, c, o, orderState)
 
 }
 
@@ -604,7 +605,7 @@ func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {
 	v := decodeInt(f[0])
 
 	c := &Contract{}
-	c.ContractId = decodeInt(f[1])
+	c.ContractID = decodeInt(f[1])
 	c.Symbol = decodeString(f[2])
 	c.SecurityType = decodeString(f[3])
 	c.Expiry = decodeDate(f[4])
@@ -641,6 +642,109 @@ func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {
 
 }
 func (d *IbDecoder) processContractDataMsg(f [][]byte) {
+	v := decodeInt(f[1])
+	var reqID int64 = 1
+	if v >= 3 {
+		reqID = decodeInt(f[2])
+		f = f[1:]
+	}
+
+	cd := ContractDetails{}
+	cd.Contract = Contract{}
+	cd.Contract.Symbol = decodeString(f[2])
+	cd.Contract.SecurityType = decodeString(f[3])
+
+	lastTradeDateOrContractMonth := f[4]
+	if !bytes.Equal(lastTradeDateOrContractMonth, []byte{}) {
+		split := bytes.Split(lastTradeDateOrContractMonth, []byte{32})
+		if len(split) > 0 {
+			cd.Contract.Expiry = decodeDate(split[0])
+		}
+
+		if len(split) > 1 {
+			cd.LastTradeTime = decodeDate(split[1])
+		}
+	}
+
+	cd.Contract.Strike = decodeFloat(f[5])
+	cd.Contract.Right = decodeString(f[6])
+	cd.Contract.Exchange = decodeString(f[7])
+	cd.Contract.Currency = decodeString(f[8])
+	cd.Contract.LocalSymbol = decodeString(f[9])
+	cd.MarketName = decodeString(f[10])
+	cd.Contract.TradingClass = decodeString(f[11])
+	cd.Contract.ContractID = decodeInt(f[12])
+	cd.MinTick = decodeFloat(f[13])
+	if d.version >= MIN_SERVER_VER_MD_SIZE_MULTIPLIER {
+		cd.MdSizeMultiplier = decodeInt(f[14])
+		f = f[1:]
+	}
+
+	cd.Contract.Multiplier = decodeString(f[14])
+	cd.OrderTypes = decodeString(f[15])
+	cd.ValidExchanges = decodeString(f[16])
+	cd.PriceMagnifier = decodeInt(f[17])
+
+	if v >= 4 {
+		cd.UnderContractID = decodeInt(f[18])
+		f = f[1:]
+	}
+
+	if v >= 5 {
+		cd.LongName = decodeString(f[18])
+		cd.Contract.PrimaryExchange = decodeString(f[19])
+		f = f[2:]
+	}
+
+	if v >= 6 {
+		cd.ContractMonth = decodeString(f[18])
+		cd.Industry = decodeString(f[19])
+		cd.Category = decodeString(f[20])
+		cd.Subcategory = decodeString(f[21])
+		cd.TimezoneID = decodeString(f[22])
+		cd.TradingHours = decodeString(f[23])
+		cd.LiquidHours = decodeString(f[24])
+		f = f[7:]
+	}
+
+	if v >= 8 {
+		cd.EVRule = decodeString(f[18])
+		cd.EVMultiplier = decodeInt(f[19])
+		f = f[2:]
+	}
+
+	if v >= 7 {
+		cd.SecurityIDList = []TagValue{}
+		for secIDListCount := decodeInt(f[18]); secIDListCount > 0 && secIDListCount != math.MaxInt64; secIDListCount-- {
+			tagValue := TagValue{}
+			tagValue.Tag = decodeString(f[19])
+			tagValue.Value = decodeString(f[20])
+			f = f[2:]
+		}
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_AGG_GROUP {
+		cd.AggGroup = decodeInt(f[18])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_UNDERLYING_INFO {
+		cd.UnderSymbol = decodeString(f[18])
+		cd.UnderSecurityType = decodeString(f[19])
+		f = f[2:]
+	}
+
+	if d.version >= MIN_SERVER_VER_MARKET_RULES {
+		cd.MarketRuleIDs = decodeString(f[18])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_REAL_EXPIRATION_DATE {
+		cd.RealExpirationDate = decodeDate(f[18])
+	}
+
+	d.wrapper.contractDetails(reqID, &cd)
 
 }
 func (d *IbDecoder) processBondContractDataMsg(f [][]byte) {
@@ -650,6 +754,84 @@ func (d *IbDecoder) processScannerDataMsg(f [][]byte) {
 
 }
 func (d *IbDecoder) processExecutionDataMsg(f [][]byte) {
+	var v int64
+	fmt.Println("processExecutionDataMsg")
+	if d.version < MIN_SERVER_VER_LAST_LIQUIDITY {
+		v = decodeInt(f[0])
+		f = f[1:]
+	} else {
+		v = int64(d.version)
+	}
+
+	var reqID int64 = -1
+	if v >= 7 {
+		reqID = decodeInt(f[0])
+		f = f[1:]
+	}
+
+	orderID := decodeInt(f[0])
+
+	c := Contract{}
+	c.ContractID = decodeInt(f[1])
+	c.Symbol = decodeString(f[2])
+	c.SecurityType = decodeString(f[3])
+	c.Expiry = decodeDate(f[4])
+	c.Strike = decodeFloat(f[5])
+	c.Right = decodeString(f[6])
+
+	if v >= 9 {
+		c.Multiplier = decodeString(f[7])
+		f = f[1:]
+	}
+
+	c.Exchange = decodeString(f[7])
+	c.Currency = decodeString(f[8])
+	c.LocalSymbol = decodeString(f[9])
+
+	if v >= 10 {
+		c.TradingClass = decodeString(f[10])
+		f = f[1:]
+	}
+
+	e := Execution{}
+	e.OrderID = orderID
+	e.ExecID = decodeString(f[10])
+	e.Time = decodeTime(f[11], "20060102 15:04:05 -0700 CTS")
+	e.AccountCode = decodeString(f[12])
+	e.Exchange = decodeString(f[13])
+	e.Side = decodeString(f[14])
+	e.Shares = decodeFloat(f[15])
+	e.Price = decodeFloat(f[16])
+	e.PermID = decodeInt(f[17])
+	e.ClientID = decodeInt(f[18])
+	e.Liquidation = decodeInt(f[19])
+
+	if v >= 6 {
+		e.CumQty = decodeFloat(f[20])
+		e.AveragePrice = decodeFloat(f[21])
+		f = f[2:]
+	}
+
+	if v >= 8 {
+		e.OrderRef = decodeString(f[20])
+		f = f[1:]
+	}
+
+	if v >= 9 {
+		e.EVRule = decodeString(f[20])
+		e.EVMultiplier = decodeFloat(f[21])
+		f = f[2:]
+	}
+
+	if d.version >= MIN_SERVER_VER_MODELS_SUPPORT {
+		e.ModelCode = decodeString(f[20])
+		f = f[1:]
+	}
+	if d.version >= MIN_SERVER_VER_LAST_LIQUIDITY {
+		e.LastLiquidity = decodeInt(f[20])
+	}
+
+	d.wrapper.execDetails(reqID, &c, &e)
 
 }
 func (d *IbDecoder) processHistoricalDataMsg(f [][]byte) {

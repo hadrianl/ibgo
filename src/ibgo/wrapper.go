@@ -7,15 +7,17 @@ import (
 )
 
 type IbWrapper interface {
-	tickPrice(reqId int64, tickType int64, price float64, attrib TickAttrib)
-	tickSize(reqId int64, tickType int64, size int64)
-	orderStatus(orderId int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64)
+	tickPrice(reqID int64, tickType int64, price float64, attrib TickAttrib)
+	tickSize(reqID int64, tickType int64, size int64)
+	orderStatus(orderID int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64)
 	nextValidId(reqId int64)
 	managedAccounts(accountsList []Account)
 	updateAccountValue(tag string, val string, currency string, accName string)
 	updatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string)
 	updateAccountTime(accTime time.Time)
 	openOrder(orderId int64, contract *Contract, order *Order, orderState *OrderState)
+	contractDetails(reqID int64, conDetails *ContractDetails)
+	execDetails(reqID int64, contract *Contract, execution *Execution)
 	connectAck()
 	error(reqId int64, errCode int64, errString string)
 
@@ -91,19 +93,20 @@ func (w *Wrapper) pnl() {
 func (w *Wrapper) pnlSingle() {
 
 }
-func (w Wrapper) openOrder(orderId int64, contract *Contract, order *Order, orderState *OrderState) {
-	fmt.Printf("orderId: %v contract: %v order: %v orderState: %v", orderId, contract, order, orderState)
+func (w Wrapper) openOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState) {
+	log.Printf("orderId: %v contract: <%v> order: %v orderState: %v\n", orderID, contract.LocalSymbol, order.OrderID, orderState.Status)
 
 }
 func (w *Wrapper) openOrderEnd() {
 
 }
-func (w Wrapper) orderStatus(orderId int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64) {
-	log.Printf("orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v\n", orderId, status, filled, remaining, avgFillPrice)
+func (w Wrapper) orderStatus(orderID int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64) {
+	log.Printf("orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v\n", orderID, status, filled, remaining, avgFillPrice)
 }
-func (w *Wrapper) execDetails() {
+func (w Wrapper) execDetails(reqID int64, contract *Contract, execution *Execution) {
+	log.Printf("reqID: %v contract: %v execution: %v\n", reqID, contract, execution)
+}
 
-}
 func (w *Wrapper) execDetailsEnd() {
 
 }
@@ -113,7 +116,8 @@ func (w *Wrapper) commissionReport() {
 func (w *Wrapper) orderBound() {
 
 }
-func (w *Wrapper) contractDetails() {
+func (w Wrapper) contractDetails(reqID int64, conDetails *ContractDetails) {
+	fmt.Printf("reqID: %v contractDetails: %v", reqID, conDetails)
 
 }
 func (w *Wrapper) contractDetailsEnd() {

@@ -78,6 +78,9 @@ func makeMsgBuf(msg interface{}) []byte {
 	case bool:
 		b = encodeBool(msg.(bool))
 
+	case time.Time:
+		b = encodeTime(msg.(time.Time))
+
 	default:
 		log.Panic("errmakeMsgBuf: can't converst the param")
 	}
@@ -147,13 +150,13 @@ func decodeString(field []byte) string {
 }
 
 func decodeDate(field []byte) time.Time {
-	if len(field) != 8 {
+	if len(field) != 8 || bytes.Equal(field, []byte{}) {
 		return time.Time{}
 	}
 	tstring := string(field)
 	t, err := time.Parse("20060102", tstring)
 	if err != nil {
-		log.Printf("errDeocodeTime: %v  tstring: %v", err, tstring)
+		log.Printf("errDeocodeDate: %v  tstring: %v", err, tstring)
 		return time.Time{}
 	}
 
@@ -199,6 +202,8 @@ func encodeBool(b bool) []byte {
 		return []byte{'0'}
 	}
 }
+
+func encodeTime(t)
 
 // func ibWrite(b *bytes.Buffer, msg interface{}) error {
 // 	switch reflect.TypeOf(msg) {

@@ -3,15 +3,15 @@ package ibgo
 import "time"
 
 type Order struct {
-	OrderId                       int64
-	ClientId                      int64
-	PermId                        int64
+	OrderID                       int64
+	ClientID                      int64
+	PermID                        int64
 	Action                        string
 	TotalQuantity                 float64
 	OrderType                     string
-	LmtPrice                      float64
+	LimitPrice                    float64
 	AuxPrice                      float64
-	Tif                           string
+	TIF                           string
 	ActiveStartTime               time.Time
 	ActiveStopTime                time.Time
 	OCAGroup                      string
@@ -136,11 +136,11 @@ type Order struct {
 	OrderMiscOptions []TagValue
 	//----------------------------------------
 	//-----------VER PEG2BENCH fields----------
-	ReferenceContractId          int64
+	ReferenceContractID          int64
 	PeggedChangeAmount           float64
 	IsPeggedChangeAmountDecrease bool
 	ReferenceChangeAmount        float64
-	ReferenceExchangeId          string
+	ReferenceExchangeID          string
 	AdjustedOrderType            string
 	TriggerPrice                 float64
 	AdjustedStopPrice            float64
@@ -149,7 +149,7 @@ type Order struct {
 	AdjustableTrailingUnit       int64
 	LmtPriceOffset               float64
 
-	Conditions            []OrderCondition
+	Conditions            []OrderConditioner
 	ConditionsCancelOrder bool
 	ConditionsIgnoreRth   bool
 
@@ -191,18 +191,6 @@ type OrderState struct {
 	MaxCommission           float64 // max
 	CommissionCurrency      string
 	WarningText             string
-}
-
-type OrderCondition struct {
-	CondType                int64
-	IsConjunctionConnection bool
-
-	// Price = 1
-	// Time = 3
-	// Margin = 4
-	// Execution = 5
-	// Volume = 6
-	// PercentChange = 7
 }
 
 type SoftDollarTier struct {
