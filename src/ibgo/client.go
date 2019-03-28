@@ -18,10 +18,11 @@ const (
 	MaxClientVersion = 148
 )
 
+// IbClient is the key component which is used to send request to TWS ro Gateway , such subscribe market data or place order
 type IbClient struct {
 	host             string
 	port             int
-	clientId         int64
+	clientID         int64
 	conn             *IbConnection
 	reader           *bufio.Reader
 	writer           *bufio.Writer
@@ -30,7 +31,7 @@ type IbClient struct {
 	inBuffer         *bytes.Buffer
 	outBuffer        *bytes.Buffer
 	connectOption    []byte
-	reqIdSeq         int
+	reqIDSeq         int64
 	reqChan          chan []byte
 	errChan          chan error
 	msgChan          chan [][]byte
@@ -42,16 +43,16 @@ type IbClient struct {
 	wg               sync.WaitGroup
 }
 
-func (ic *IbClient) getReqId() int {
-	ic.reqIdSeq++
-	return ic.reqIdSeq
+func (ic *IbClient) GetReqID() int64 {
+	ic.reqIDSeq++
+	return ic.reqIDSeq
 }
 
-func NewIbClient(host string, port int, clientId int64) *IbClient {
+func NewIbClient(host string, port int, clientID int64) *IbClient {
 	ic := &IbClient{
 		host:     host,
 		port:     port,
-		clientId: clientId,
+		clientID: clientID,
 	}
 	ic.reset()
 	if err := ic.conn.connect(host, port); err != nil {
@@ -62,11 +63,11 @@ func NewIbClient(host string, port int, clientId int64) *IbClient {
 
 }
 
-func (ic *IbClient) Connect(host string, port int, clientId int64) error {
+func (ic *IbClient) Connect(host string, port int, clientID int64) error {
 
 	ic.host = host
 	ic.port = port
-	ic.clientId = clientId
+	ic.clientID = clientID
 	ic.reset()
 	if err := ic.conn.connect(host, port); err != nil {
 		return err
@@ -124,7 +125,7 @@ func (ic *IbClient) HandShake() error {
 		ic.serverVersion = Version(v)
 		ic.serverTime = bytesToTime(serverInfo[1])
 		ic.decoder.setVersion(ic.serverVersion) // Init Decoder
-		ic.decoder.setmsgId2process()
+		ic.decoder.setmsgID2process()
 		log.Println("ServerVersion:", ic.serverVersion)
 		log.Println("ServerTime:", ic.serverTime)
 	}
@@ -141,16 +142,16 @@ func (ic *IbClient) HandShake() error {
 
 // send the clientId to TWS or Gateway
 func (ic *IbClient) startAPI() error {
-	var start_api []byte
+	var startAPI []byte
 	v := 2
 	if ic.serverVersion >= MIN_SERVER_VER_OPTIONAL_CAPABILITIES {
-		start_api = makeMsg(int64(START_API), int64(v), ic.clientId, "")
+		startAPI = makeMsg(int64(START_API), int64(v), ic.clientID, "")
 	} else {
-		start_api = makeMsg(int64(START_API), int64(v), ic.clientId)
+		startAPI = makeMsg(int64(START_API), int64(v), ic.clientID)
 	}
 
-	log.Println("Start API:", start_api)
-	if _, err := ic.writer.Write(start_api); err != nil {
+	log.Println("Start API:", startAPI)
+	if _, err := ic.writer.Write(startAPI); err != nil {
 		return err
 	}
 
@@ -160,7 +161,7 @@ func (ic *IbClient) startAPI() error {
 }
 
 func (ic *IbClient) reset() {
-	ic.reqIdSeq = 0
+	ic.reqIDSeq = 0
 	ic.conn = &IbConnection{}
 	ic.wrapper = Wrapper{ic: ic}
 	ic.decoder = &IbDecoder{wrapper: ic.wrapper}
@@ -179,7 +180,7 @@ func (ic *IbClient) reset() {
 
 // ---------------req func ----------------------------------------------
 
-func (ic *IbClient) reqCurrentTime() {
+func (ic *IbClient) ReqCurrentTime() {
 	v := 1
 	msg := makeMsg(REQ_CURRENT_TIME, v)
 
@@ -187,14 +188,14 @@ func (ic *IbClient) reqCurrentTime() {
 }
 
 // reqAutoOpenOrders will make the client access to the TWS Orders (only if clientId=0)
-func (ic *IbClient) reqAutoOpenOrders(autoBind bool) {
+func (ic *IbClient) ReqAutoOpenOrders(autoBind bool) {
 	v := 1
 	msg := makeMsg(REQ_AUTO_OPEN_ORDERS, v, autoBind)
 
 	ic.reqChan <- msg
 }
 
-func (ic *IbClient) reqAccountUpdates(subscribe bool, accName string) {
+func (ic *IbClient) ReqAccountUpdates(subscribe bool, accName string) {
 	v := 2
 	msg := makeMsg(REQ_ACCT_DATA, v, subscribe, accName)
 
@@ -202,17 +203,17 @@ func (ic *IbClient) reqAccountUpdates(subscribe bool, accName string) {
 
 }
 
-func (ic *IbClient) reqExecutions(reqID int64, execFilter ExecutionFilter) {
+func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	v := 3
 	msg := makeMsg(REQ_EXECUTIONS, v)
 
 	if ic.serverVersion >= MIN_SERVER_VER_EXECUTION_DATA_CHAIN {
-		chain_msg := makeMsg(reqID)
-		msg = bytes.Join([][]byte{msg, chain_msg}, []byte{})
+		chainMsg := makeMsg(reqID)
+		msg = bytes.Join([][]byte{msg, chainMsg}, []byte{})
 	}
 
-	filter_msg := makeMsg(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
-	msg = bytes.Join([][]byte{msg, filter_msg}, []byte{})
+	filterMsg := makeMsg(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
+	msg = bytes.Join([][]byte{msg, filterMsg}, []byte{})
 
 	ic.reqChan <- msg
 }

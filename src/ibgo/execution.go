@@ -2,6 +2,7 @@ package ibgo
 
 import "time"
 
+// Execution is the information of trade detail
 type Execution struct {
 	ExecID        string
 	Time          time.Time

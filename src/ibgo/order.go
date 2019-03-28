@@ -72,7 +72,7 @@ type Order struct {
 	VolatilityType                 int64
 	DeltaNeutralOrderType          string
 	DeltaNeutralAuxPrice           float64
-	DeltaNeutralConId              int64
+	DeltaNeutralContractID         int64
 	DeltaNeutralSettlingFirm       string
 	DeltaNeutralClearingAccount    string
 	DeltaNeutralClearingIntent     string
@@ -117,7 +117,7 @@ type Order struct {
 
 	AlgoParams              []TagValue
 	SmartComboRoutingParams []TagValue
-	AlgoId                  string
+	AlgoID                  string
 	// -----------------------------------------
 
 	// ----------what if order -------------------
@@ -175,6 +175,7 @@ type Order struct {
 	SoftDollarTier SoftDollarTier
 }
 
+// OrderState is the state of Order
 type OrderState struct {
 	Status                  string
 	InitialMarginBefore     string

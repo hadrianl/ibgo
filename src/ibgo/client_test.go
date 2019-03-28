@@ -23,9 +23,10 @@ func TestClient(t *testing.T) {
 		return
 	}
 
-	ic.reqCurrentTime()
-	ic.reqAutoOpenOrders(true)
-	ic.reqAccountUpdates(true, "")
+	ic.ReqCurrentTime()
+	ic.ReqAutoOpenOrders(true)
+	ic.ReqAccountUpdates(true, "")
+	ic.ReqExecutions(ic.GetReqId(), ExecutionFilter{})
 
 	ic.Run()
 	time.Sleep(time.Second * 10)

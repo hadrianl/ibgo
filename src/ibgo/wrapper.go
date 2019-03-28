@@ -23,6 +23,7 @@ type IbWrapper interface {
 
 	//wrap end
 	accountDownloadEnd(accName string)
+	openOrderEnd()
 	currentTime(t time.Time)
 }
 
@@ -35,30 +36,30 @@ func (w Wrapper) connectAck() {
 }
 
 func (w Wrapper) nextValidId(reqId int64) {
-	log.Printf("nextValidId: %v\n", reqId)
+	log.Printf("<nextValidId>: %v\n", reqId)
 
 }
 
 func (w Wrapper) managedAccounts(accountsList []Account) {
-	log.Printf("managedAccounts: %v\n", accountsList)
+	log.Printf("<managedAccounts>: %v\n", accountsList)
 
 }
 
 func (w Wrapper) tickPrice(reqId int64, tickType int64, price float64, attrib TickAttrib) {
-	log.Printf("reqId: %v tickType: %v price: %v\n", reqId, tickType, price)
+	log.Printf("<tickPrice>: reqId: %v tickType: %v price: %v\n", reqId, tickType, price)
 }
 
 func (w Wrapper) updateAccountTime(accTime time.Time) {
-	log.Printf("updateAccountTime: %v", accTime)
+	log.Printf("<updateAccountTime>: %v", accTime)
 
 }
 func (w Wrapper) updateAccountValue(tag string, val string, currency string, accName string) {
-	log.Printf("Account:%v <%v>:%v currency:%v", accName, tag, val, currency)
+	log.Printf("<updateAccountValue>: accName:%v [%v]:%v currency:%v", accName, tag, val, currency)
 
 }
 
 func (w Wrapper) accountDownloadEnd(accName string) {
-	log.Printf("accountDownloadEnd: %v", accName)
+	log.Printf("<accountDownloadEnd>: %v", accName)
 
 }
 
@@ -79,7 +80,7 @@ func (w *Wrapper) accountSummaryEnd() {
 }
 
 func (w Wrapper) updatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string) {
-	log.Printf("contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
+	log.Printf("<updatePortfolio>: contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
 }
 func (w *Wrapper) position() {
 
@@ -94,17 +95,18 @@ func (w *Wrapper) pnlSingle() {
 
 }
 func (w Wrapper) openOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState) {
-	log.Printf("orderId: %v contract: <%v> order: %v orderState: %v\n", orderID, contract.LocalSymbol, order.OrderID, orderState.Status)
+	log.Printf("<openOrder>: orderId: %v contract: <%v> order: %v orderState: %v\n", orderID, contract.LocalSymbol, order.OrderID, orderState.Status)
 
 }
-func (w *Wrapper) openOrderEnd() {
+func (w Wrapper) openOrderEnd() {
+	log.Printf("<openOrderEnd>...")
 
 }
 func (w Wrapper) orderStatus(orderID int64, status string, filled float64, remaining float64, avgFillPrice float64, permId int64, parentId int64, lastFillPrice float64, clientId int64, whyHeld string, mktCapPrice float64) {
-	log.Printf("orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v\n", orderID, status, filled, remaining, avgFillPrice)
+	log.Printf("<orderStatus>: orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v\n", orderID, status, filled, remaining, avgFillPrice)
 }
 func (w Wrapper) execDetails(reqID int64, contract *Contract, execution *Execution) {
-	log.Printf("reqID: %v contract: %v execution: %v\n", reqID, contract, execution)
+	log.Printf("<execDetails>: reqID: %v contract: %v execution: %v\n", reqID, contract, execution)
 }
 
 func (w *Wrapper) execDetailsEnd() {
@@ -117,7 +119,7 @@ func (w *Wrapper) orderBound() {
 
 }
 func (w Wrapper) contractDetails(reqID int64, conDetails *ContractDetails) {
-	fmt.Printf("reqID: %v contractDetails: %v", reqID, conDetails)
+	fmt.Printf("<contractDetails>: reqID: %v contractDetails: %v", reqID, conDetails)
 
 }
 func (w *Wrapper) contractDetailsEnd() {
@@ -157,7 +159,7 @@ func (w *Wrapper) priceSizeTick() {
 
 }
 func (w Wrapper) tickSize(reqId int64, tickType int64, size int64) {
-	log.Printf("reqId: %v tickType: %v size: %v\n", reqId, tickType, size)
+	log.Printf("<tickSize>: reqId: %v tickType: %v size: %v\n", reqId, tickType, size)
 
 }
 func (w *Wrapper) tickSnapshotEnd() {
@@ -236,9 +238,9 @@ func (w *Wrapper) receiveFA() {
 
 }
 func (w Wrapper) currentTime(t time.Time) {
-	log.Printf("CurrentTime :%v\n", t)
+	log.Printf("<currentTime>: %v\n", t)
 }
 func (w Wrapper) error(reqId int64, errCode int64, errString string) {
-	log.Printf("reqId: %v errCode: %v errString: %v\n", reqId, errCode, errString)
+	log.Printf("<error>: reqId: %v errCode: %v errString: %v\n", reqId, errCode, errString)
 
 }

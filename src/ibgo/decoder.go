@@ -13,10 +13,11 @@ const (
 	TIME_FORMAT string = "2006-01-02 15:04:05 +0700 CST"
 )
 
+// IbDecoder help to decode the msg buf received from TWS or Gateway
 type IbDecoder struct {
 	wrapper       IbWrapper
 	version       Version
-	msgId2process map[IN]func([][]byte)
+	msgID2process map[IN]func([][]byte)
 	errChan       chan error
 }
 
@@ -45,11 +46,11 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 		}
 	}()
 
-	MsgId, _ := strconv.ParseInt(string(fs[0]), 10, 64)
-	if processer, ok := d.msgId2process[IN(MsgId)]; ok {
+	MsgID, _ := strconv.ParseInt(string(fs[0]), 10, 64)
+	if processer, ok := d.msgID2process[IN(MsgID)]; ok {
 		processer(fs[1:])
 	} else {
-		log.Printf("MsgId: %v -> MsgBuf: %v", MsgId, fs[1:])
+		log.Printf("MsgId: %v -> MsgBuf: %v", MsgID, fs[1:])
 	}
 
 }
@@ -77,8 +78,8 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 // 	processer(params...)
 // }
 
-func (d *IbDecoder) setmsgId2process() {
-	d.msgId2process = map[IN]func([][]byte){
+func (d *IbDecoder) setmsgID2process() {
+	d.msgID2process = map[IN]func([][]byte){
 		TICK_PRICE:       d.processTickPriceMsg,
 		TICK_SIZE:        d.wrapTickSize,
 		ORDER_STATUS:     d.processOrderStatusMsg,
@@ -87,27 +88,28 @@ func (d *IbDecoder) setmsgId2process() {
 		ACCT_VALUE:       d.wrapUpdateAccountValue,
 		PORTFOLIO_VALUE:  d.processPortfolioValueMsg,
 		ACCT_UPDATE_TIME: d.wrapUpdateAccountTime,
-		NEXT_VALID_ID:    d.wrapNextValidId,
+		NEXT_VALID_ID:    d.wrapNextValidID,
 		CONTRACT_DATA:    d.processContractDataMsg,
 		EXECUTION_DATA:   d.processExecutionDataMsg,
 		MANAGED_ACCTS:    d.wrapManagedAccounts,
 
 		ACCT_DOWNLOAD_END: d.wrapAccountDownloadEnd,
+		OPEN_ORDER_END:    d.wrapOpenOrderEnd,
 		CURRENT_TIME:      d.wrapCurrentTime,
 	}
 
 }
 
 func (d *IbDecoder) wrapTickSize(f [][]byte) {
-	reqId := decodeInt(f[1])
+	reqID := decodeInt(f[1])
 	tickType := decodeInt(f[2])
 	size := decodeInt(f[3])
-	d.wrapper.tickSize(reqId, tickType, size)
+	d.wrapper.tickSize(reqID, tickType, size)
 }
 
-func (d *IbDecoder) wrapNextValidId(f [][]byte) {
-	reqId := decodeInt(f[1])
-	d.wrapper.nextValidId(reqId)
+func (d *IbDecoder) wrapNextValidID(f [][]byte) {
+	reqID := decodeInt(f[1])
+	d.wrapper.nextValidId(reqID)
 
 }
 
@@ -146,11 +148,11 @@ func (d *IbDecoder) wrapUpdateAccountTime(f [][]byte) {
 }
 
 func (d *IbDecoder) wrapError(f [][]byte) {
-	reqId := decodeInt(f[1])
+	reqID := decodeInt(f[1])
 	errorCode := decodeInt(f[2])
 	errorString := decodeString(f[3])
 
-	d.wrapper.error(reqId, errorCode, errorString)
+	d.wrapper.error(reqID, errorCode, errorString)
 }
 
 func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
@@ -168,10 +170,16 @@ func (d *IbDecoder) wrapAccountDownloadEnd(f [][]byte) {
 	d.wrapper.accountDownloadEnd(accName)
 }
 
+func (d *IbDecoder) wrapOpenOrderEnd(f [][]byte) {
+	fmt.Printf("wrapOpenOrderEnd: %v", f)
+
+	d.wrapper.openOrderEnd()
+}
+
 // ------------------------------------------------------------------
 
 func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
-	reqId := decodeInt(f[1])
+	reqID := decodeInt(f[1])
 	tickType := decodeInt(f[2])
 	price := decodeFloat(f[3])
 	size := decodeInt(f[4])
@@ -188,7 +196,7 @@ func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
 		}
 	}
 
-	d.wrapper.tickPrice(reqId, tickType, price, attrib)
+	d.wrapper.tickPrice(reqID, tickType, price, attrib)
 
 	var sizeTickType int64
 	switch tickType {
@@ -209,7 +217,7 @@ func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
 	}
 
 	if sizeTickType != NOT_SET {
-		d.wrapper.tickSize(reqId, sizeTickType, size)
+		d.wrapper.tickSize(reqID, sizeTickType, size)
 	}
 
 }
@@ -218,7 +226,7 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 	if d.version < MIN_SERVER_VER_MARKET_CAP_PRICE {
 		f = f[1:]
 	}
-	orderId := decodeInt(f[0])
+	orderID := decodeInt(f[0])
 	status := decodeString(f[1])
 
 	filled := decodeFloat(f[2])
@@ -227,10 +235,10 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 
 	avgFilledPrice := decodeFloat(f[4])
 
-	permId := decodeInt(f[5])
-	parentId := decodeInt(f[6])
+	permID := decodeInt(f[5])
+	parentID := decodeInt(f[6])
 	lastFillPrice := decodeFloat(f[7])
-	clientId := decodeInt(f[8])
+	clientID := decodeInt(f[8])
 	whyHeld := decodeString(f[9])
 
 	var mktCapPrice float64
@@ -240,7 +248,7 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 		mktCapPrice = float64(0)
 	}
 
-	d.wrapper.orderStatus(orderId, status, filled, remaining, avgFilledPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)
+	d.wrapper.orderStatus(orderID, status, filled, remaining, avgFilledPrice, permID, parentID, lastFillPrice, clientID, whyHeld, mktCapPrice)
 
 }
 
@@ -355,7 +363,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 	o.DeltaNeutralAuxPrice = decodeFloat(f[58])
 
 	if version >= 27 && o.DeltaNeutralOrderType != "" {
-		o.DeltaNeutralConId = decodeInt(f[59])
+		o.DeltaNeutralContractID = decodeInt(f[59])
 		o.DeltaNeutralSettlingFirm = decodeString(f[60])
 		o.DeltaNeutralClearingAccount = decodeString(f[61])
 		o.DeltaNeutralClearingIntent = decodeString(f[62])
@@ -390,7 +398,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 		for comboLegsCount := decodeInt(f[65]); comboLegsCount > 0 && comboLegsCount != math.MaxInt64; comboLegsCount-- {
 			fmt.Println("comboLegsCount:", comboLegsCount)
 			comboleg := ComboLeg{}
-			comboleg.ConId = decodeInt(f[66])
+			comboleg.ContractID = decodeInt(f[66])
 			comboleg.Ratio = decodeInt(f[67])
 			comboleg.Action = decodeString(f[68])
 			comboleg.Exchange = decodeString(f[69])

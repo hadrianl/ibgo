@@ -2,6 +2,7 @@ package ibgo
 
 import "time"
 
+//Contract is the base struct about the information of specified symbol(identify by ContractID)
 type Contract struct {
 	ContractID      int64
 	Symbol          string
@@ -38,6 +39,7 @@ type DeltaNeutralContract struct {
 	Price      float64
 }
 
+// ContractDetails contain a Contract and other details about this contract, can be request by ReqContractDetails
 type ContractDetails struct {
 	Contract       Contract
 	MarketName     string

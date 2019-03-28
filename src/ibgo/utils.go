@@ -38,7 +38,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 	}
 	// log.Println("Get SizeBuf:", sizeBuf)
 	size := bytesToInt(sizeBuf)
-	log.Println("Get SizeBuf:", size)
+	// log.Println("Get SizeBuf:", size)
 
 	msgBuf := make([]byte, size)
 
@@ -140,9 +140,8 @@ func decodeBool(field []byte) bool {
 
 	if bytes.Equal(field, []byte{'0'}) || bytes.Equal(field, []byte{}) {
 		return false
-	} else {
-		return true
 	}
+	return true
 }
 
 func decodeString(field []byte) string {
@@ -198,9 +197,9 @@ func encodeString(str string) []byte {
 func encodeBool(b bool) []byte {
 	if b {
 		return []byte{'1'}
-	} else {
-		return []byte{'0'}
 	}
+	return []byte{'0'}
+
 }
 
 func encodeTime(t time.Time) []byte {

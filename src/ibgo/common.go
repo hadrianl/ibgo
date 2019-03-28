@@ -38,11 +38,11 @@ const (
 )
 
 type ComboLeg struct {
-	ConId     int64
-	Ratio     int64
-	Action    string
-	Exchange  string
-	OpenClose int64
+	ContractID int64
+	Ratio      int64
+	Action     string
+	Exchange   string
+	OpenClose  int64
 
 	// for stock legs when doing short sale
 	ShortSaleSlot      int64

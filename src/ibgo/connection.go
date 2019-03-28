@@ -16,10 +16,11 @@ const (
 	REDIRECT
 )
 
+// IbConnection wrap the tcp connection with TWS or Gateway
 type IbConnection struct {
 	host         string
 	port         int
-	clientId     int64
+	clientID     int64
 	conn         net.Conn
 	state        int
 	numBytesSent int
