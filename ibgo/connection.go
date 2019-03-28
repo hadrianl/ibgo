@@ -80,7 +80,7 @@ func (ibconn *IbConnection) reset() {
 	ibconn.numBytesRecv = 0
 	ibconn.numMsgSent = 0
 	ibconn.numMsgRecv = 0
-	ibconn.setState(DISCONNECTED)
+	// ibconn.setState(DISCONNECTED)
 	// ibconn.event.connected = make(chan int, 10)
 	// ibconn.event.disconnected = make(chan int, 10)
 	// ibconn.event.hasError = make(chan error, 100)

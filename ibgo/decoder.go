@@ -13,28 +13,19 @@ const (
 	TIME_FORMAT string = "2006-01-02 15:04:05 +0700 CST"
 )
 
-// IbDecoder help to decode the msg buf received from TWS or Gateway
-type IbDecoder struct {
+// ibDecoder help to decode the msg buf received from TWS or Gateway
+type ibDecoder struct {
 	wrapper       IbWrapper
 	version       Version
 	msgID2process map[IN]func([][]byte)
 	errChan       chan error
 }
 
-//NewIbDecoder create a decoder to decode the fileds based on version
-func NewIbDecoder(wrapper IbWrapper, version Version) *IbDecoder {
-	decoder := IbDecoder{}
-	decoder.wrapper = wrapper
-	decoder.version = version
-	decoder.errChan = make(chan error, 30)
-	return &decoder
-}
-
-func (d *IbDecoder) setVersion(version Version) {
+func (d *ibDecoder) setVersion(version Version) {
 	d.version = version
 }
 
-func (d *IbDecoder) interpret(fs ...[]byte) {
+func (d *ibDecoder) interpret(fs ...[]byte) {
 	if len(fs) == 0 {
 		return
 	}
@@ -55,7 +46,7 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 
 }
 
-// func (d *IbDecoder) interpretWithSignature(fs [][]byte, processer interface{}) {
+// func (d *ibDecoder) interpretWithSignature(fs [][]byte, processer interface{}) {
 // 	if processer == nil {
 // 		fmt.Println("No processer")
 // 	}
@@ -78,7 +69,7 @@ func (d *IbDecoder) interpret(fs ...[]byte) {
 // 	processer(params...)
 // }
 
-func (d *IbDecoder) setmsgID2process() {
+func (d *ibDecoder) setmsgID2process() {
 	d.msgID2process = map[IN]func([][]byte){
 		TICK_PRICE:       d.processTickPriceMsg,
 		TICK_SIZE:        d.wrapTickSize,
@@ -100,20 +91,20 @@ func (d *IbDecoder) setmsgID2process() {
 
 }
 
-func (d *IbDecoder) wrapTickSize(f [][]byte) {
+func (d *ibDecoder) wrapTickSize(f [][]byte) {
 	reqID := decodeInt(f[1])
 	tickType := decodeInt(f[2])
 	size := decodeInt(f[3])
 	d.wrapper.tickSize(reqID, tickType, size)
 }
 
-func (d *IbDecoder) wrapNextValidID(f [][]byte) {
+func (d *ibDecoder) wrapNextValidID(f [][]byte) {
 	reqID := decodeInt(f[1])
-	d.wrapper.nextValidId(reqID)
+	d.wrapper.nextValidID(reqID)
 
 }
 
-func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
+func (d *ibDecoder) wrapManagedAccounts(f [][]byte) {
 	// accNames := strings.Split(string(f[1]), ",")
 	accNameField := bytes.Split(f[1], []byte{','})
 
@@ -125,7 +116,7 @@ func (d *IbDecoder) wrapManagedAccounts(f [][]byte) {
 
 }
 
-func (d *IbDecoder) wrapUpdateAccountValue(f [][]byte) {
+func (d *ibDecoder) wrapUpdateAccountValue(f [][]byte) {
 	tag := decodeString(f[1])
 	val := decodeString(f[2])
 	currency := decodeString(f[3])
@@ -134,7 +125,7 @@ func (d *IbDecoder) wrapUpdateAccountValue(f [][]byte) {
 	d.wrapper.updateAccountValue(tag, val, currency, accName)
 }
 
-func (d *IbDecoder) wrapUpdateAccountTime(f [][]byte) {
+func (d *ibDecoder) wrapUpdateAccountTime(f [][]byte) {
 	ts := string(f[1])
 	today := time.Now()
 	// time.
@@ -147,7 +138,7 @@ func (d *IbDecoder) wrapUpdateAccountTime(f [][]byte) {
 	d.wrapper.updateAccountTime(t)
 }
 
-func (d *IbDecoder) wrapError(f [][]byte) {
+func (d *ibDecoder) wrapError(f [][]byte) {
 	reqID := decodeInt(f[1])
 	errorCode := decodeInt(f[2])
 	errorString := decodeString(f[3])
@@ -155,7 +146,7 @@ func (d *IbDecoder) wrapError(f [][]byte) {
 	d.wrapper.error(reqID, errorCode, errorString)
 }
 
-func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
+func (d *ibDecoder) wrapCurrentTime(f [][]byte) {
 	ts := decodeInt(f[1])
 	t := time.Unix(ts, 0)
 
@@ -164,21 +155,20 @@ func (d *IbDecoder) wrapCurrentTime(f [][]byte) {
 
 //--------------wrap end func ---------------------------------
 
-func (d *IbDecoder) wrapAccountDownloadEnd(f [][]byte) {
+func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
 	accName := string(f[1])
 
 	d.wrapper.accountDownloadEnd(accName)
 }
 
-func (d *IbDecoder) wrapOpenOrderEnd(f [][]byte) {
-	fmt.Printf("wrapOpenOrderEnd: %v", f)
+func (d *ibDecoder) wrapOpenOrderEnd(f [][]byte) {
 
 	d.wrapper.openOrderEnd()
 }
 
 // ------------------------------------------------------------------
 
-func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
+func (d *ibDecoder) processTickPriceMsg(f [][]byte) {
 	reqID := decodeInt(f[1])
 	tickType := decodeInt(f[2])
 	price := decodeFloat(f[3])
@@ -222,7 +212,7 @@ func (d *IbDecoder) processTickPriceMsg(f [][]byte) {
 
 }
 
-func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
+func (d *ibDecoder) processOrderStatusMsg(f [][]byte) {
 	if d.version < MIN_SERVER_VER_MARKET_CAP_PRICE {
 		f = f[1:]
 	}
@@ -252,7 +242,7 @@ func (d *IbDecoder) processOrderStatusMsg(f [][]byte) {
 
 }
 
-func (d *IbDecoder) processOpenOrder(f [][]byte) {
+func (d *ibDecoder) processOpenOrder(f [][]byte) {
 
 	var version int64
 	if d.version < MIN_SERVER_VER_ORDER_CONTAINER {
@@ -609,7 +599,7 @@ func (d *IbDecoder) processOpenOrder(f [][]byte) {
 
 }
 
-func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {
+func (d *ibDecoder) processPortfolioValueMsg(f [][]byte) {
 	v := decodeInt(f[0])
 
 	c := &Contract{}
@@ -649,7 +639,7 @@ func (d *IbDecoder) processPortfolioValueMsg(f [][]byte) {
 	d.wrapper.updatePortfolio(c, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accName)
 
 }
-func (d *IbDecoder) processContractDataMsg(f [][]byte) {
+func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 	v := decodeInt(f[1])
 	var reqID int64 = 1
 	if v >= 3 {
@@ -755,13 +745,13 @@ func (d *IbDecoder) processContractDataMsg(f [][]byte) {
 	d.wrapper.contractDetails(reqID, &cd)
 
 }
-func (d *IbDecoder) processBondContractDataMsg(f [][]byte) {
+func (d *ibDecoder) processBondContractDataMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processScannerDataMsg(f [][]byte) {
+func (d *ibDecoder) processScannerDataMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processExecutionDataMsg(f [][]byte) {
+func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 	var v int64
 	fmt.Println("processExecutionDataMsg")
 	if d.version < MIN_SERVER_VER_LAST_LIQUIDITY {
@@ -842,111 +832,111 @@ func (d *IbDecoder) processExecutionDataMsg(f [][]byte) {
 	d.wrapper.execDetails(reqID, &c, &e)
 
 }
-func (d *IbDecoder) processHistoricalDataMsg(f [][]byte) {
+func (d *ibDecoder) processHistoricalDataMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
+func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processRealTimeBarMsg(f [][]byte) {
+func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processTickOptionComputationMsg(f [][]byte) {
-
-}
-
-func (d *IbDecoder) processDeltaNeutralValidationMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processMarketDataTypeMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processCommissionReportMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processPositionDataMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processPositionMultiMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processSecurityDefinitionOptionParameterEndMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processSoftDollarTiersMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processFamilyCodesMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processSymbolSamplesMsg(f [][]byte) {
-
-}
-func (d *IbDecoder) processSmartComponents(f [][]byte) {
-
-}
-func (d *IbDecoder) processTickReqParams(f [][]byte) {
-
-}
-func (d *IbDecoder) processMktDepthExchanges(f [][]byte) {
+func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
 
 }
 
-func (d *IbDecoder) processHeadTimestamp(f [][]byte) {
+func (d *ibDecoder) processDeltaNeutralValidationMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processTickNews(f [][]byte) {
+func (d *ibDecoder) processMarketDataTypeMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processNewsProviders(f [][]byte) {
+func (d *ibDecoder) processCommissionReportMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processNewsArticle(f [][]byte) {
+func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalNews(f [][]byte) {
+func (d *ibDecoder) processPositionMultiMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalNewsEnd(f [][]byte) {
+func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistogramData(f [][]byte) {
+func (d *ibDecoder) processSecurityDefinitionOptionParameterEndMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processRerouteMktDataReq(f [][]byte) {
+func (d *ibDecoder) processSoftDollarTiersMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processRerouteMktDepthReq(f [][]byte) {
+func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processMarketRuleMsg(f [][]byte) {
+func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
 
 }
-func (d *IbDecoder) processPnLMsg(f [][]byte) {
+func (d *ibDecoder) processSmartComponents(f [][]byte) {
 
 }
-func (d *IbDecoder) processPnLSingleMsg(f [][]byte) {
+func (d *ibDecoder) processTickReqParams(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalTicks(f [][]byte) {
+func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalTicksBidAsk(f [][]byte) {
+
+func (d *ibDecoder) processHeadTimestamp(f [][]byte) {
 
 }
-func (d *IbDecoder) processHistoricalTicksLast(f [][]byte) {
+func (d *ibDecoder) processTickNews(f [][]byte) {
 
 }
-func (d *IbDecoder) processTickByTickMsg(f [][]byte) {
+func (d *ibDecoder) processNewsProviders(f [][]byte) {
 
 }
-func (d *IbDecoder) processOrderBoundMsg(f [][]byte) {
+func (d *ibDecoder) processNewsArticle(f [][]byte) {
 
 }
-func (d *IbDecoder) processMarketDepthL2Msg(f [][]byte) {
+func (d *ibDecoder) processHistoricalNews(f [][]byte) {
+
+}
+func (d *ibDecoder) processHistoricalNewsEnd(f [][]byte) {
+
+}
+func (d *ibDecoder) processHistogramData(f [][]byte) {
+
+}
+func (d *ibDecoder) processRerouteMktDataReq(f [][]byte) {
+
+}
+func (d *ibDecoder) processRerouteMktDepthReq(f [][]byte) {
+
+}
+func (d *ibDecoder) processMarketRuleMsg(f [][]byte) {
+
+}
+func (d *ibDecoder) processPnLMsg(f [][]byte) {
+
+}
+func (d *ibDecoder) processPnLSingleMsg(f [][]byte) {
+
+}
+func (d *ibDecoder) processHistoricalTicks(f [][]byte) {
+
+}
+func (d *ibDecoder) processHistoricalTicksBidAsk(f [][]byte) {
+
+}
+func (d *ibDecoder) processHistoricalTicksLast(f [][]byte) {
+
+}
+func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
+
+}
+func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
+
+}
+func (d *ibDecoder) processMarketDepthL2Msg(f [][]byte) {
 
 }
 

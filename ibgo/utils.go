@@ -59,7 +59,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 
 }
 
-func makeMsgBuf(msg interface{}) []byte {
+func field2Buf(msg interface{}) []byte {
 	var b []byte
 
 	switch msg.(type) {
@@ -88,18 +88,20 @@ func makeMsgBuf(msg interface{}) []byte {
 	return append(b, '\x00')
 }
 
-func mergeMsgBuf(fields ...interface{}) []byte {
+// makeMsgBuf is a universal way to make the request ,but not an efficient way
+// TODO: do some test and improve!!!
+func makeMsgBuf(fields ...interface{}) []byte {
+
+	// make the whole msg buf
 	msgBufs := [][]byte{}
 	for _, f := range fields {
-		msgBufField := makeMsgBuf(f)
-		msgBufs = append(msgBufs, msgBufField)
+		// make the field into buf
+		msgBuf := field2Buf(f)
+		msgBufs = append(msgBufs, msgBuf)
 	}
 	msg := bytes.Join(msgBufs, []byte(""))
-	return msg
-}
 
-func makeMsg(fields ...interface{}) []byte {
-	msg := mergeMsgBuf(fields...)
+	// add the size header
 	sizeBuf := make([]byte, 4)
 	binary.BigEndian.PutUint32(sizeBuf, uint32(len(msg)))
 

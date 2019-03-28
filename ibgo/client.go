@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -27,7 +28,7 @@ type IbClient struct {
 	reader           *bufio.Reader
 	writer           *bufio.Writer
 	wrapper          IbWrapper
-	decoder          *IbDecoder
+	decoder          *ibDecoder
 	inBuffer         *bytes.Buffer
 	outBuffer        *bytes.Buffer
 	connectOption    []byte
@@ -43,24 +44,22 @@ type IbClient struct {
 	wg               sync.WaitGroup
 }
 
+func NewIbClient(wrapper IbWrapper) *IbClient {
+	ic := &IbClient{}
+	ic.SetWrapper(wrapper)
+	ic.reset()
+
+	return ic
+}
+
 func (ic *IbClient) GetReqID() int64 {
 	ic.reqIDSeq++
 	return ic.reqIDSeq
 }
 
-func NewIbClient(host string, port int, clientID int64) *IbClient {
-	ic := &IbClient{
-		host:     host,
-		port:     port,
-		clientID: clientID,
-	}
-	ic.reset()
-	if err := ic.conn.connect(host, port); err != nil {
-		panic(err)
-	}
-
-	return ic
-
+func (ic *IbClient) SetWrapper(wrapper IbWrapper) {
+	ic.wrapper = wrapper
+	ic.decoder = &ibDecoder{wrapper: ic.wrapper}
 }
 
 func (ic *IbClient) Connect(host string, port int, clientID int64) error {
@@ -68,7 +67,6 @@ func (ic *IbClient) Connect(host string, port int, clientID int64) error {
 	ic.host = host
 	ic.port = port
 	ic.clientID = clientID
-	ic.reset()
 	if err := ic.conn.connect(host, port); err != nil {
 		return err
 	}
@@ -86,10 +84,10 @@ func (ic *IbClient) Disconnect() error {
 	if err := ic.conn.disconnect(); err != nil {
 		return err
 	}
-	ic.conn.setState(DISCONNECTED)
+
 	defer log.Println("Disconnected!")
 	ic.wg.Wait()
-
+	ic.conn.setState(DISCONNECTED)
 	return nil
 }
 
@@ -145,9 +143,9 @@ func (ic *IbClient) startAPI() error {
 	var startAPI []byte
 	v := 2
 	if ic.serverVersion >= MIN_SERVER_VER_OPTIONAL_CAPABILITIES {
-		startAPI = makeMsg(int64(START_API), int64(v), ic.clientID, "")
+		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID, "")
 	} else {
-		startAPI = makeMsg(int64(START_API), int64(v), ic.clientID)
+		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID)
 	}
 
 	log.Println("Start API:", startAPI)
@@ -163,8 +161,6 @@ func (ic *IbClient) startAPI() error {
 func (ic *IbClient) reset() {
 	ic.reqIDSeq = 0
 	ic.conn = &IbConnection{}
-	ic.wrapper = Wrapper{ic: ic}
-	ic.decoder = &IbDecoder{wrapper: ic.wrapper}
 	ic.conn.reset()
 	ic.reader = bufio.NewReader(ic.conn)
 	ic.writer = bufio.NewWriter(ic.conn)
@@ -182,7 +178,7 @@ func (ic *IbClient) reset() {
 
 func (ic *IbClient) ReqCurrentTime() {
 	v := 1
-	msg := makeMsg(REQ_CURRENT_TIME, v)
+	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
 
 	ic.reqChan <- msg
 }
@@ -190,14 +186,14 @@ func (ic *IbClient) ReqCurrentTime() {
 // reqAutoOpenOrders will make the client access to the TWS Orders (only if clientId=0)
 func (ic *IbClient) ReqAutoOpenOrders(autoBind bool) {
 	v := 1
-	msg := makeMsg(REQ_AUTO_OPEN_ORDERS, v, autoBind)
+	msg := makeMsgBuf(REQ_AUTO_OPEN_ORDERS, v, autoBind)
 
 	ic.reqChan <- msg
 }
 
 func (ic *IbClient) ReqAccountUpdates(subscribe bool, accName string) {
 	v := 2
-	msg := makeMsg(REQ_ACCT_DATA, v, subscribe, accName)
+	msg := makeMsgBuf(REQ_ACCT_DATA, v, subscribe, accName)
 
 	ic.reqChan <- msg
 
@@ -205,14 +201,14 @@ func (ic *IbClient) ReqAccountUpdates(subscribe bool, accName string) {
 
 func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	v := 3
-	msg := makeMsg(REQ_EXECUTIONS, v)
+	msg := makeMsgBuf(REQ_EXECUTIONS, v)
 
 	if ic.serverVersion >= MIN_SERVER_VER_EXECUTION_DATA_CHAIN {
-		chainMsg := makeMsg(reqID)
+		chainMsg := makeMsgBuf(reqID)
 		msg = bytes.Join([][]byte{msg, chainMsg}, []byte{})
 	}
 
-	filterMsg := makeMsg(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
+	filterMsg := makeMsgBuf(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
 	msg = bytes.Join([][]byte{msg, filterMsg}, []byte{})
 
 	ic.reqChan <- msg
@@ -294,10 +290,17 @@ decodeLoop:
 }
 
 // ---------------------------------------------------------------------------------------
-func (ic *IbClient) Run() {
-	log.Println("setup receiver")
+
+// Run make the event loop run, all make sense after run!
+func (ic *IbClient) Run() error {
+	if ic.conn.state == DISCONNECTED {
+		return errors.New("IbClient is DISCONNECTED!!!")
+	}
+	log.Println("RUN Client")
 	ic.wg.Add(3)
 	go ic.goRequest()
 	go ic.goReceive()
 	go ic.goDecode()
+
+	return nil
 }

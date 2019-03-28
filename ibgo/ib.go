@@ -5,28 +5,46 @@ type IB struct {
 	Wrapper  Wrapper
 	host     string
 	port     int
-	clientId int64
+	clientID int64
 }
 
-func NewIB(host string, port int, clientId int64) *IB {
+func NewIB(host string, port int, clientID int64) *IB {
 	ib := &IB{
-		Client:   &IbClient{},
-		Wrapper:  Wrapper{},
 		host:     host,
 		port:     port,
-		clientId: clientId,
+		clientID: clientID,
 	}
+	ibwrapper := Wrapper{}
+	ibclient := NewIbClient(ibwrapper)
+	ib.Client = ibclient
+	ib.Wrapper = ibwrapper
 
 	return ib
 }
 
 // Connect to TWS or Gateway
-func (ib *IB) Connect(host string, port int, clientId int64) error {
-	ib.host = host
-	ib.port = port
-	ib.clientId = clientId
-	ib.Client.reset()
-	err := ib.Client.Connect(host, port, clientId)
+func (ib *IB) Connect() error {
 
+	if err := ib.Client.Connect(ib.host, ib.port, ib.clientID); err != nil {
+		return err
+	}
+
+	if err := ib.Client.HandShake(); err != nil {
+		return err
+	}
+
+	err := ib.Client.Run()
 	return err
+}
+
+func (ib *IB) DisConnect() error {
+	err := ib.Client.Disconnect()
+	return err
+}
+
+func (ib *IB) DoSomeTest() {
+	ib.Client.ReqCurrentTime()
+	ib.Client.ReqAutoOpenOrders(true)
+	ib.Client.ReqAccountUpdates(true, "")
+	ib.Client.ReqExecutions(ib.Client.GetReqID(), ExecutionFilter{})
 }
