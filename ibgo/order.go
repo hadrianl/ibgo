@@ -1,7 +1,5 @@
 package ibgo
 
-import "time"
-
 type Order struct {
 	OrderID                       int64
 	ClientID                      int64
@@ -12,8 +10,8 @@ type Order struct {
 	LimitPrice                    float64
 	AuxPrice                      float64
 	TIF                           string
-	ActiveStartTime               time.Time
-	ActiveStopTime                time.Time
+	ActiveStartTime               string
+	ActiveStopTime                string
 	OCAGroup                      string
 	OCAType                       int64 // 1 = CANCEL_WITH_BLOCK, 2 = REDUCE_WITH_BLOCK, 3 = REDUCE_NON_BLOCK
 	OrderRef                      string
@@ -25,8 +23,8 @@ type Order struct {
 	TriggerMethod                 int64 // 0=Default, 1=Double_Bid_Ask, 2=Last, 3=Double_Last, 4=Bid_Ask, 7=Last_or_Bid_Ask, 8=Mid-point
 	OutsideRTH                    bool
 	Hidden                        bool
-	GoodAfterTime                 time.Time
-	GoodTillDate                  time.Time
+	GoodAfterTime                 string
+	GoodTillDate                  string
 	OverridePercentageConstraints bool
 	Rule80A                       string // Individual = 'I', Agency = 'A', AgentOtherMember = 'W', IndividualPTIA = 'J', AgencyPTIA = 'U', AgentOtherMemberPTIA = 'M', IndividualPT = 'K', AgencyPT = 'Y', AgentOtherMemberPT = 'N'
 	AllOrNone                     bool

@@ -1,13 +1,11 @@
 package ibgo
 
-import "time"
-
 //Contract is the base struct about the information of specified symbol(identify by ContractID)
 type Contract struct {
 	ContractID      int64
 	Symbol          string
 	SecurityType    string
-	Expiry          time.Time
+	Expiry          string
 	Strike          float64
 	Right           string
 	Multiplier      string
@@ -65,8 +63,8 @@ type ContractDetails struct {
 	UnderSecurityType  string
 	MarketRuleIDs      string
 	SecurityIDList     []TagValue
-	RealExpirationDate time.Time
-	LastTradeTime      time.Time
+	RealExpirationDate string
+	LastTradeTime      string
 
 	// BOND values
 	Cusip             string
@@ -79,8 +77,8 @@ type ContractDetails struct {
 	Coupon            float64
 	Convertible       bool
 	Maturity          string
-	IssueDate         time.Time
-	NextOptionDate    time.Time
+	IssueDate         string
+	NextOptionDate    string
 	NextOptionType    string
 	NextOptionPartial bool
 	Notes             string

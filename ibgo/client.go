@@ -201,15 +201,98 @@ func (ic *IbClient) ReqAccountUpdates(subscribe bool, accName string) {
 
 func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	v := 3
-	msg := makeMsgBuf(REQ_EXECUTIONS, v)
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_EXECUTIONS, v)
 
 	if ic.serverVersion >= MIN_SERVER_VER_EXECUTION_DATA_CHAIN {
-		chainMsg := makeMsgBuf(reqID)
-		msg = bytes.Join([][]byte{msg, chainMsg}, []byte{})
+		fields = append(fields, reqID)
 	}
 
-	filterMsg := makeMsgBuf(execFilter.ClientID, execFilter.AccountCode, execFilter.Time, execFilter.SecurityType, execFilter.Exchange, execFilter.Side)
-	msg = bytes.Join([][]byte{msg, filterMsg}, []byte{})
+	fields = append(fields,
+		execFilter.ClientID,
+		execFilter.AccountCode,
+		execFilter.Time,
+		execFilter.SecurityType,
+		execFilter.Exchange,
+		execFilter.Side)
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTime string, duration string, barSize string, whatToShow string, useRTH bool, formatDate int, keepUpToDate bool, chartOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
+		if contract.TradingClass != "" || contract.ContractID > 0 {
+			ic.wrapper.error(reqID, UPDATE_TWS.Code, UPDATE_TWS.Msg)
+		}
+	}
+
+	v := 6
+
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_HISTORICAL_DATA)
+	if ic.serverVersion <= MIN_SERVER_VER_SYNT_REALTIME_BARS {
+		fields = append(fields, v)
+	}
+
+	fields = append(fields, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol,
+	)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+	fields = append(fields,
+		contract.IncludeExpired,
+		endDateTime,
+		barSize,
+		duration,
+		useRTH,
+		whatToShow,
+		formatDate,
+	)
+
+	if contract.SecurityType == "BAG" {
+		fields = append(fields, len(contract.ComboLegs))
+		for _, comboLeg := range contract.ComboLegs {
+			fields = append(fields,
+				comboLeg.ContractID,
+				comboLeg.Ratio,
+				comboLeg.Action,
+				comboLeg.Exchange,
+			)
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_SYNT_REALTIME_BARS {
+		fields = append(fields, keepUpToDate)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		chartOptionsStr := ""
+		for _, tagValue := range chartOptions {
+			chartOptionsStr += tagValue.Value
+		}
+		fields = append(fields, chartOptionsStr)
+	}
+
+	msg := makeMsgBuf(fields...)
+	// fmt.Println(msg)
 
 	ic.reqChan <- msg
 }

@@ -71,22 +71,29 @@ func (d *ibDecoder) interpret(fs ...[]byte) {
 
 func (d *ibDecoder) setmsgID2process() {
 	d.msgID2process = map[IN]func([][]byte){
-		TICK_PRICE:       d.processTickPriceMsg,
-		TICK_SIZE:        d.wrapTickSize,
-		ORDER_STATUS:     d.processOrderStatusMsg,
-		ERR_MSG:          d.wrapError,
-		OPEN_ORDER:       d.processOpenOrder,
-		ACCT_VALUE:       d.wrapUpdateAccountValue,
-		PORTFOLIO_VALUE:  d.processPortfolioValueMsg,
-		ACCT_UPDATE_TIME: d.wrapUpdateAccountTime,
-		NEXT_VALID_ID:    d.wrapNextValidID,
-		CONTRACT_DATA:    d.processContractDataMsg,
-		EXECUTION_DATA:   d.processExecutionDataMsg,
-		MANAGED_ACCTS:    d.wrapManagedAccounts,
+		TICK_PRICE:             d.processTickPriceMsg,
+		TICK_SIZE:              d.wrapTickSize,
+		ORDER_STATUS:           d.processOrderStatusMsg,
+		ERR_MSG:                d.wrapError,
+		OPEN_ORDER:             d.processOpenOrder,
+		ACCT_VALUE:             d.wrapUpdateAccountValue,
+		PORTFOLIO_VALUE:        d.processPortfolioValueMsg,
+		ACCT_UPDATE_TIME:       d.wrapUpdateAccountTime,
+		NEXT_VALID_ID:          d.wrapNextValidID,
+		CONTRACT_DATA:          d.processContractDataMsg,
+		EXECUTION_DATA:         d.processExecutionDataMsg,
+		MARKET_DEPTH:           d.wrapUpdateMktDepth,
+		MARKET_DEPTH_L2:        d.wrapUpdateMktDepthL2,
+		NEWS_BULLETINS:         d.wrapUpdateNewsBulletin,
+		MANAGED_ACCTS:          d.wrapManagedAccounts,
+		RECEIVE_FA:             d.wrapReceiveFA,
+		HISTORICAL_DATA:        d.processHistoricalDataMsg,
+		HISTORICAL_DATA_UPDATE: d.processHistoricalDataUpdateMsg,
 
-		ACCT_DOWNLOAD_END: d.wrapAccountDownloadEnd,
-		OPEN_ORDER_END:    d.wrapOpenOrderEnd,
-		CURRENT_TIME:      d.wrapCurrentTime,
+		ACCT_DOWNLOAD_END:  d.wrapAccountDownloadEnd,
+		OPEN_ORDER_END:     d.wrapOpenOrderEnd,
+		EXECUTION_DATA_END: d.wrapExecDetailsEnd,
+		CURRENT_TIME:       d.wrapCurrentTime,
 	}
 
 }
@@ -153,6 +160,48 @@ func (d *ibDecoder) wrapCurrentTime(f [][]byte) {
 	d.wrapper.currentTime(t)
 }
 
+func (d *ibDecoder) wrapUpdateMktDepth(f [][]byte) {
+	reqID := decodeInt(f[1])
+	position := decodeInt(f[2])
+	operation := decodeInt(f[3])
+	side := decodeInt(f[4])
+	price := decodeFloat(f[5])
+	size := decodeInt(f[6])
+
+	d.wrapper.updateMktDepth(reqID, position, operation, side, price, size)
+
+}
+
+func (d *ibDecoder) wrapUpdateMktDepthL2(f [][]byte) {
+	reqID := decodeInt(f[1])
+	position := decodeInt(f[2])
+	marketMaker := decodeString(f[3])
+	operation := decodeInt(f[4])
+	side := decodeInt(f[5])
+	price := decodeFloat(f[6])
+	size := decodeInt(f[7])
+	isSmartDepth := decodeBool(f[8])
+
+	d.wrapper.updateMktDepthL2(reqID, position, marketMaker, operation, side, price, size, isSmartDepth)
+
+}
+
+func (d *ibDecoder) wrapUpdateNewsBulletin(f [][]byte) {
+	msgID := decodeInt(f[1])
+	msgType := decodeInt(f[2])
+	newsMessage := decodeString(f[3])
+	originExch := decodeString(f[4])
+
+	d.wrapper.updateNewsBulletin(msgID, msgType, newsMessage, originExch)
+}
+
+func (d *ibDecoder) wrapReceiveFA(f [][]byte) {
+	faData := decodeInt(f[1])
+	cxml := decodeString(f[2])
+
+	d.wrapper.receiveFA(faData, cxml)
+}
+
 //--------------wrap end func ---------------------------------
 
 func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
@@ -164,6 +213,12 @@ func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
 func (d *ibDecoder) wrapOpenOrderEnd(f [][]byte) {
 
 	d.wrapper.openOrderEnd()
+}
+
+func (d *ibDecoder) wrapExecDetailsEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.execDetailsEnd(reqID)
 }
 
 // ------------------------------------------------------------------
@@ -260,9 +315,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	c.ContractID = decodeInt(f[1])
 	c.Symbol = decodeString(f[2])
 	c.SecurityType = decodeString(f[3])
-	if t, err := time.Parse(TIME_FORMAT, decodeString(f[4])); err == nil {
-		c.Expiry = t
-	}
+	c.Expiry = decodeString(f[4])
 
 	c.Strike = decodeFloat(f[5])
 	c.Right = decodeString(f[6])
@@ -298,7 +351,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	o.OutsideRTH = decodeBool(f[23])
 	o.Hidden = decodeBool(f[24])
 	o.DiscretionaryAmount = decodeFloat(f[25])
-	o.GoodAfterTime = decodeTime(f[26], "20060102")
+	o.GoodAfterTime = decodeString(f[26])
 
 	_ = decodeString(f[27]) //_sharesAllocation
 
@@ -312,7 +365,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		f = f[1:]
 	}
 
-	o.GoodTillDate = decodeTime(f[32], "20060102")
+	o.GoodTillDate = decodeString(f[32])
 
 	o.Rule80A = decodeString(f[33])
 	o.PercentOffset = decodeFloat(f[34]) //show_unset
@@ -606,7 +659,7 @@ func (d *ibDecoder) processPortfolioValueMsg(f [][]byte) {
 	c.ContractID = decodeInt(f[1])
 	c.Symbol = decodeString(f[2])
 	c.SecurityType = decodeString(f[3])
-	c.Expiry = decodeDate(f[4])
+	c.Expiry = decodeString(f[4])
 	c.Strike = decodeFloat(f[5])
 	c.Right = decodeString(f[6])
 
@@ -656,11 +709,11 @@ func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 	if !bytes.Equal(lastTradeDateOrContractMonth, []byte{}) {
 		split := bytes.Split(lastTradeDateOrContractMonth, []byte{32})
 		if len(split) > 0 {
-			cd.Contract.Expiry = decodeDate(split[0])
+			cd.Contract.Expiry = decodeString(split[0])
 		}
 
 		if len(split) > 1 {
-			cd.LastTradeTime = decodeDate(split[1])
+			cd.LastTradeTime = decodeString(split[1])
 		}
 	}
 
@@ -739,7 +792,7 @@ func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 	}
 
 	if d.version >= MIN_SERVER_VER_REAL_EXPIRATION_DATE {
-		cd.RealExpirationDate = decodeDate(f[18])
+		cd.RealExpirationDate = decodeString(f[18])
 	}
 
 	d.wrapper.contractDetails(reqID, &cd)
@@ -773,7 +826,7 @@ func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 	c.ContractID = decodeInt(f[1])
 	c.Symbol = decodeString(f[2])
 	c.SecurityType = decodeString(f[3])
-	c.Expiry = decodeDate(f[4])
+	c.Expiry = decodeString(f[4])
 	c.Strike = decodeFloat(f[5])
 	c.Right = decodeString(f[6])
 
@@ -794,7 +847,7 @@ func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 	e := Execution{}
 	e.OrderID = orderID
 	e.ExecID = decodeString(f[10])
-	e.Time = decodeTime(f[11], "20060102 15:04:05 -0700 CTS")
+	e.Time = decodeString(f[11])
 	e.AccountCode = decodeString(f[12])
 	e.Exchange = decodeString(f[13])
 	e.Side = decodeString(f[14])
@@ -833,9 +886,48 @@ func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processHistoricalDataMsg(f [][]byte) {
+	if d.version < MIN_SERVER_VER_SYNT_REALTIME_BARS {
+		f = f[1:]
+	}
+
+	reqID := decodeInt(f[0])
+	startDatestr := decodeString(f[1])
+	endDateStr := decodeString(f[2])
+
+	for itemCount := decodeInt(f[3]); itemCount > 0; itemCount-- {
+		bar := &BarData{}
+		bar.Date = decodeString(f[4])
+		bar.Open = decodeFloat(f[5])
+		bar.High = decodeFloat(f[6])
+		bar.Low = decodeFloat(f[7])
+		bar.Close = decodeFloat(f[8])
+		bar.Volume = decodeFloat(f[9])
+		bar.Average = decodeFloat(f[10])
+
+		if d.version < MIN_SERVER_VER_SYNT_REALTIME_BARS {
+			f = f[1:]
+		}
+		bar.BarCount = decodeInt(f[11])
+		f = f[8:]
+		d.wrapper.historicalData(reqID, bar)
+	}
+	f = f[1:]
+
+	d.wrapper.historicalDataEnd(reqID, startDatestr, endDateStr)
 
 }
 func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	bar := &BarData{}
+	bar.BarCount = decodeInt(f[1])
+	bar.Date = decodeString(f[2])
+	bar.Open = decodeFloat(f[3])
+	bar.Close = decodeFloat(f[4])
+	bar.High = decodeFloat(f[5])
+	bar.Low = decodeFloat(f[6])
+	bar.Volume = decodeFloat(f[7])
+
+	d.wrapper.historicalDataUpdate(reqID, bar)
 
 }
 func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {

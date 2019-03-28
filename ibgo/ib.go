@@ -43,8 +43,13 @@ func (ib *IB) DisConnect() error {
 }
 
 func (ib *IB) DoSomeTest() {
+	// hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", []ComboLeg{}, DeltaNeutralContract{}}
+	// fmt.Println(hsij9)
 	ib.Client.ReqCurrentTime()
 	ib.Client.ReqAutoOpenOrders(true)
 	ib.Client.ReqAccountUpdates(true, "")
-	ib.Client.ReqExecutions(ib.Client.GetReqID(), ExecutionFilter{})
+
+	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, []TagValue{})
+	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
+	// ib.Client.ReqExecutions(699, ef)
 }

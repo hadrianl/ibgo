@@ -1,7 +1,5 @@
 package ibgo
 
-import "time"
-
 type Account struct {
 	Name string
 }
@@ -55,9 +53,20 @@ type ComboLeg struct {
 type ExecutionFilter struct {
 	ClientID     int64
 	AccountCode  string
-	Time         time.Time
+	Time         string
 	Symbol       string
 	SecurityType string
 	Exchange     string
 	Side         string
+}
+
+type BarData struct {
+	Date     string
+	Open     float64
+	High     float64
+	Low      float64
+	Close    float64
+	Volume   float64
+	BarCount int64
+	Average  float64
 }

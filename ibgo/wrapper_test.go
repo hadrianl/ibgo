@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type TestWrapper struct {
+type Wrapper struct {
 }
 
 func (w Wrapper) connectAck() {
@@ -32,7 +32,7 @@ func (w Wrapper) updateAccountTime(accTime time.Time) {
 
 }
 func (w Wrapper) updateAccountValue(tag string, val string, currency string, accName string) {
-	log.Printf("<updateAccountValue>: accName:%v [%v]:%v currency:%v", accName, tag, val, currency)
+	// log.Printf("<updateAccountValue>: accName:%v [%v]:%v currency:%v", accName, tag, val, currency)
 
 }
 
@@ -73,7 +73,7 @@ func (w *Wrapper) pnlSingle() {
 
 }
 func (w Wrapper) openOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState) {
-	log.Printf("<openOrder>: orderId: %v contract: <%v> order: %v orderState: %v\n", orderID, contract.LocalSymbol, order.OrderID, orderState.Status)
+	log.Printf("<openOrder>: orderId: %v contract: <%v> order: %v orderState: %v\n", orderID, contract, order.OrderID, orderState.Status)
 
 }
 func (w Wrapper) openOrderEnd() {
@@ -87,8 +87,8 @@ func (w Wrapper) execDetails(reqID int64, contract *Contract, execution *Executi
 	log.Printf("<execDetails>: reqID: %v contract: %v execution: %v\n", reqID, contract, execution)
 }
 
-func (w *Wrapper) execDetailsEnd() {
-
+func (w Wrapper) execDetailsEnd(reqID int64) {
+	log.Printf("<execDetailsEnd>: reqID: %v", reqID)
 }
 func (w *Wrapper) commissionReport() {
 
@@ -112,13 +112,15 @@ func (w *Wrapper) marketRule() {
 func (w *Wrapper) realtimeBar() {
 
 }
-func (w *Wrapper) historicalData() {
+func (w Wrapper) historicalData(reqID int64, bar *BarData) {
+	log.Printf("<historicalData>: reqID: %v bar: %v", reqID, bar)
 
 }
-func (w *Wrapper) historicalDataEnd() {
-
+func (w Wrapper) historicalDataEnd(reqID int64, startDateStr string, endDateStr string) {
+	log.Printf("<historicalDataEnd>: reqID: %v startDate: %v endDate: %v", reqID, startDateStr, endDateStr)
 }
-func (w *Wrapper) historicalDataUpdate() {
+func (w Wrapper) historicalDataUpdate(reqID int64, bar *BarData) {
+	log.Printf("<historicalDataUpdate>: reqID: %v bar: %v", reqID, bar)
 
 }
 func (w *Wrapper) headTimestamp() {
@@ -164,11 +166,23 @@ func (w *Wrapper) tickReqParams() {
 func (w *Wrapper) mktDepthExchanges() {
 
 }
-func (w *Wrapper) updateMktDepth() {
 
+/*Returns the order book.
+
+tickerId -  the request's identifier
+position -  the order book's row being updated
+operation - how to refresh the row:
+	0 = insert (insert this new order into the row identified by 'position')
+	1 = update (update the existing order in the row identified by 'position')
+	2 = delete (delete the existing order at the row identified by 'position').
+side -  0 for ask, 1 for bid
+price - the order's price
+size -  the order's size*/
+func (w Wrapper) updateMktDepth(reqID int64, position int64, operation int64, side int64, price float64, size int64) {
+	log.Printf("<updateMktDepth>: reqID:%v", reqID)
 }
-func (w *Wrapper) updateMktDepthL2() {
-
+func (w Wrapper) updateMktDepthL2(reqID int64, position int64, marketMaker string, operation int64, side int64, price float64, size int64, isSmartDepth bool) {
+	log.Printf("<updateMktDepthL2>: reqID:%v", reqID)
 }
 func (w *Wrapper) tickOptionComputation() {
 
@@ -209,10 +223,12 @@ func (w *Wrapper) historicalNews() {
 func (w *Wrapper) historicalNewsEnd() {
 
 }
-func (w *Wrapper) updateNewsBulletin() {
+func (w Wrapper) updateNewsBulletin(msgID int64, msgType int64, newsMessage string, originExch string) {
+	log.Printf("<updateNewsBulletin>: msgID:%v", msgID)
 
 }
-func (w *Wrapper) receiveFA() {
+func (w Wrapper) receiveFA(faData int64, cxml string) {
+	log.Printf("<receiveFA>: faData:%v", faData)
 
 }
 func (w Wrapper) currentTime(t time.Time) {

@@ -17,11 +17,20 @@ type IbWrapper interface {
 	openOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState)
 	contractDetails(reqID int64, conDetails *ContractDetails)
 	execDetails(reqID int64, contract *Contract, execution *Execution)
+
+	updateMktDepth(reqID int64, position int64, operation int64, side int64, price float64, size int64)
+	updateMktDepthL2(reqID int64, position int64, marketMaker string, operation int64, side int64, price float64, size int64, isSmartDepth bool)
+	updateNewsBulletin(msgID int64, msgType int64, newsMessage string, originExch string)
+	historicalData(reqID int64, bar *BarData)
+	receiveFA(faData int64, cxml string)
+	historicalDataUpdate(reqID int64, bar *BarData)
 	connectAck()
 	error(reqID int64, errCode int64, errString string)
 
 	//wrap end
 	accountDownloadEnd(accName string)
 	openOrderEnd()
+	historicalDataEnd(reqID int64, startDateStr string, endDateStr string)
+	execDetailsEnd(reqID int64)
 	currentTime(t time.Time)
 }
