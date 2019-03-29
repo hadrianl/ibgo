@@ -74,7 +74,7 @@ type ContractDetails struct {
 	CouponType        string
 	Callable          bool
 	Putable           bool
-	Coupon            float64
+	Coupon            int64
 	Convertible       bool
 	Maturity          string
 	IssueDate         string

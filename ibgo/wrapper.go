@@ -24,6 +24,15 @@ type IbWrapper interface {
 	historicalData(reqID int64, bar *BarData)
 	receiveFA(faData int64, cxml string)
 	historicalDataUpdate(reqID int64, bar *BarData)
+	bondContractDetails(reqID int64, conDetails *ContractDetails)
+	scannerParameters(xml string)
+	scannerData(reqID int64, rank int64, conDetails *ContractDetails, distance string, benchmark string, projection string, legs string)
+	scannerDataEnd(reqID int64)
+	tickOptionComputation(reqID int64, tickType int64, impliedVol float64, delta float64, optPrice float64, pvDiviedn float64, gamma float64, vega float64, theta float64, undPrice float64)
+	tickGeneric(reqID int64, tickType int64, value float64)
+	tickString(reqID int64, tickType int64, value string)
+	tickEFP(reqID int64, tickType int64, basisPoints float64, formattedBasisPoints string, totalDividends float64, holdDays int64, futureLastTradeDate string, dividendImpact float64, dividendsToLastTradeDate float64)
+
 	connectAck()
 	error(reqID int64, errCode int64, errString string)
 

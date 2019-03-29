@@ -103,6 +103,10 @@ func (w Wrapper) contractDetails(reqID int64, conDetails *ContractDetails) {
 func (w *Wrapper) contractDetailsEnd() {
 
 }
+
+func (w Wrapper) bondContractDetails(reqID int64, conDetails *ContractDetails) {
+	fmt.Printf("<bondContractDetails>: reqID: %v contractDetails: %v", reqID, conDetails)
+}
 func (w *Wrapper) symbolSamples() {
 
 }
@@ -154,12 +158,18 @@ func (w *Wrapper) tickByTickBidAsk() {
 func (w *Wrapper) tickByTickMidPoint() {
 
 }
-func (w *Wrapper) tickString() {
+func (w Wrapper) tickString(reqID int64, tickType int64, value string) {
+	log.Printf("<tickString>: reqID: %v tickType: %v value: %v\n", reqID, tickType, value)
 
 }
-func (w *Wrapper) tickGeneric() {
-
+func (w Wrapper) tickGeneric(reqID int64, tickType int64, value float64) {
+	log.Printf("<tickGeneric>: reqID: %v tickType: %v value: %v\n", reqID, tickType, value)
 }
+
+func (w Wrapper) tickEFP(reqID int64, tickType int64, basisPoints float64, formattedBasisPoints string, totalDividends float64, holdDays int64, futureLastTradeDate string, dividendImpact float64, dividendsToLastTradeDate float64) {
+	log.Printf("<tickEFP>: reqID: %v tickType: %v basisPoints: %v\n", reqID, tickType, basisPoints)
+}
+
 func (w *Wrapper) tickReqParams() {
 
 }
@@ -184,20 +194,21 @@ func (w Wrapper) updateMktDepth(reqID int64, position int64, operation int64, si
 func (w Wrapper) updateMktDepthL2(reqID int64, position int64, marketMaker string, operation int64, side int64, price float64, size int64, isSmartDepth bool) {
 	log.Printf("<updateMktDepthL2>: reqID:%v", reqID)
 }
-func (w *Wrapper) tickOptionComputation() {
-
+func (w Wrapper) tickOptionComputation(reqID int64, tickType int64, impliedVol float64, delta float64, optPrice float64, pvDiviedn float64, gamma float64, vega float64, theta float64, undPrice float64) {
+	log.Printf("<tickOptionComputation>: reqID:%v ", reqID)
 }
 func (w *Wrapper) fundamentalData() {
 
 }
-func (w *Wrapper) scannerParameters() {
+func (w Wrapper) scannerParameters(xml string) {
+	log.Printf("<scannerParameters>: xml:%v", xml)
 
 }
-func (w *Wrapper) scannerData() {
-
+func (w Wrapper) scannerData(reqID int64, rank int64, conDetails *ContractDetails, distance string, benchmark string, projection string, legs string) {
+	log.Printf("<scannerData>: reqID:%v", reqID)
 }
-func (w *Wrapper) scannerDataEnd() {
-
+func (w *Wrapper) scannerDataEnd(reqID int64) {
+	log.Printf("<scannerDataEnd>: reqID:%v", reqID)
 }
 func (w *Wrapper) histogramData() {
 
