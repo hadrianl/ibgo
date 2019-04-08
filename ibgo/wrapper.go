@@ -17,7 +17,18 @@ type IbWrapper interface {
 	openOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState)
 	contractDetails(reqID int64, conDetails *ContractDetails)
 	execDetails(reqID int64, contract *Contract, execution *Execution)
-
+	deltaNeutralValidation(reqID int64, deltaNeutralContract DeltaNeutralContract)
+	tickSnapshotEnd(reqID int64)
+	marketDataType(reqID int64, marketDataType int64)
+	position(account string, contract *Contract, position float64, avgCost float64)
+	positionEnd()
+	accountSummary(reqID int64, account string, tag string, value string, currency string)
+	accountSummaryEnd(reqID int64)
+	verifyMessageAPI(apiData string)
+	verifyCompleted(isSuccessful bool, err string)
+	displayGroupList(reqID int64, groups string)
+	displayGroupUpdated(reqID int64, contractInfo string)
+	verifyAndAuthMessageAPI(apiData string, xyzChallange string)
 	updateMktDepth(reqID int64, position int64, operation int64, side int64, price float64, size int64)
 	updateMktDepthL2(reqID int64, position int64, marketMaker string, operation int64, side int64, price float64, size int64, isSmartDepth bool)
 	updateNewsBulletin(msgID int64, msgType int64, newsMessage string, originExch string)
@@ -32,7 +43,7 @@ type IbWrapper interface {
 	tickGeneric(reqID int64, tickType int64, value float64)
 	tickString(reqID int64, tickType int64, value string)
 	tickEFP(reqID int64, tickType int64, basisPoints float64, formattedBasisPoints string, totalDividends float64, holdDays int64, futureLastTradeDate string, dividendImpact float64, dividendsToLastTradeDate float64)
-
+	commissionReport(commissionReport CommissionReport)
 	connectAck()
 	error(reqID int64, errCode int64, errString string)
 

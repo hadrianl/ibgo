@@ -1,5 +1,7 @@
 package ibgo
 
+import "fmt"
+
 type Account struct {
 	Name string
 }
@@ -81,4 +83,17 @@ type RealTimeBar struct {
 	Volume  float64
 	Wap     float64
 	Count   int64
+}
+
+type CommissionReport struct {
+	ExecId              string
+	Commission          float64
+	Currency            string
+	RealizedPNL         float64
+	Yield               float64
+	YieldRedemptionDate int64 //YYYYMMDD
+}
+
+func (cr CommissionReport) String() string {
+	return fmt.Sprintf("ExecId: %v, Commission: %v, Currency: %v, RealizedPnL: %v, Yield: %v, YieldRedemptionDate: %v", cr.ExecId, cr.Commission, cr.Currency, cr.RealizedPNL, cr.Yield, cr.YieldRedemptionDate)
 }

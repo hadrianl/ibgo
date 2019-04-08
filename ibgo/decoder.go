@@ -71,36 +71,49 @@ func (d *ibDecoder) interpret(fs ...[]byte) {
 
 func (d *ibDecoder) setmsgID2process() {
 	d.msgID2process = map[IN]func([][]byte){
-		TICK_PRICE:              d.processTickPriceMsg,
-		TICK_SIZE:               d.wrapTickSize,
-		ORDER_STATUS:            d.processOrderStatusMsg,
-		ERR_MSG:                 d.wrapError,
-		OPEN_ORDER:              d.processOpenOrder,
-		ACCT_VALUE:              d.wrapUpdateAccountValue,
-		PORTFOLIO_VALUE:         d.processPortfolioValueMsg,
-		ACCT_UPDATE_TIME:        d.wrapUpdateAccountTime,
-		NEXT_VALID_ID:           d.wrapNextValidID,
-		CONTRACT_DATA:           d.processContractDataMsg,
-		EXECUTION_DATA:          d.processExecutionDataMsg,
-		MARKET_DEPTH:            d.wrapUpdateMktDepth,
-		MARKET_DEPTH_L2:         d.wrapUpdateMktDepthL2,
-		NEWS_BULLETINS:          d.wrapUpdateNewsBulletin,
-		MANAGED_ACCTS:           d.wrapManagedAccounts,
-		RECEIVE_FA:              d.wrapReceiveFA,
-		HISTORICAL_DATA:         d.processHistoricalDataMsg,
-		HISTORICAL_DATA_UPDATE:  d.processHistoricalDataUpdateMsg,
-		BOND_CONTRACT_DATA:      d.processBondContractDataMsg,
-		SCANNER_PARAMETERS:      d.wrapScannerParameters,
-		SCANNER_DATA:            d.processScannerDataMsg,
-		TICK_OPTION_COMPUTATION: d.processTickOptionComputationMsg,
-		TICK_GENERIC:            d.wrapTickGeneric,
-		TICK_STRING:             d.wrapTickString,
-		TICK_EFP:                d.wrapTickEFP,
-		CURRENT_TIME:            d.wrapCurrentTime,
-		REAL_TIME_BARS:          d.processRealTimeBarMsg,
-		ACCT_DOWNLOAD_END:       d.wrapAccountDownloadEnd,
-		OPEN_ORDER_END:          d.wrapOpenOrderEnd,
-		EXECUTION_DATA_END:      d.wrapExecDetailsEnd,
+		TICK_PRICE:                  d.processTickPriceMsg,
+		TICK_SIZE:                   d.wrapTickSize,
+		ORDER_STATUS:                d.processOrderStatusMsg,
+		ERR_MSG:                     d.wrapError,
+		OPEN_ORDER:                  d.processOpenOrder,
+		ACCT_VALUE:                  d.wrapUpdateAccountValue,
+		PORTFOLIO_VALUE:             d.processPortfolioValueMsg,
+		ACCT_UPDATE_TIME:            d.wrapUpdateAccountTime,
+		NEXT_VALID_ID:               d.wrapNextValidID,
+		CONTRACT_DATA:               d.processContractDataMsg,
+		EXECUTION_DATA:              d.processExecutionDataMsg,
+		MARKET_DEPTH:                d.wrapUpdateMktDepth,
+		MARKET_DEPTH_L2:             d.wrapUpdateMktDepthL2,
+		NEWS_BULLETINS:              d.wrapUpdateNewsBulletin,
+		MANAGED_ACCTS:               d.wrapManagedAccounts,
+		RECEIVE_FA:                  d.wrapReceiveFA,
+		HISTORICAL_DATA:             d.processHistoricalDataMsg,
+		HISTORICAL_DATA_UPDATE:      d.processHistoricalDataUpdateMsg,
+		BOND_CONTRACT_DATA:          d.processBondContractDataMsg,
+		SCANNER_PARAMETERS:          d.wrapScannerParameters,
+		SCANNER_DATA:                d.processScannerDataMsg,
+		TICK_OPTION_COMPUTATION:     d.processTickOptionComputationMsg,
+		TICK_GENERIC:                d.wrapTickGeneric,
+		TICK_STRING:                 d.wrapTickString,
+		TICK_EFP:                    d.wrapTickEFP,
+		CURRENT_TIME:                d.wrapCurrentTime,
+		REAL_TIME_BARS:              d.processRealTimeBarMsg,
+		ACCT_DOWNLOAD_END:           d.wrapAccountDownloadEnd,
+		OPEN_ORDER_END:              d.wrapOpenOrderEnd,
+		EXECUTION_DATA_END:          d.wrapExecDetailsEnd,
+		DELTA_NEUTRAL_VALIDATION:    d.processDeltaNeutralValidationMsg,
+		TICK_SNAPSHOT_END:           d.wrapTickSnapshotEnd,
+		MARKET_DATA_TYPE:            d.wrapMarketDataType,
+		COMMISSION_REPORT:           d.processCommissionReportMsg,
+		POSITION_DATA:               d.processPositionDataMsg,
+		POSITION_END:                d.wrapPositionEnd,
+		ACCOUNT_SUMMARY:             d.wrapAccountSummary,
+		ACCOUNT_SUMMARY_END:         d.wrapAccountSummaryEnd,
+		VERIFY_MESSAGE_API:          d.wrapVerifyMessageAPI,
+		VERIFY_COMPLETED:            d.wrapVerifyCompleted,
+		DISPLAY_GROUP_LIST:          d.wrapDisplayGroupList,
+		DISPLAY_GROUP_UPDATED:       d.wrapDisplayGroupUpdated,
+		VERIFY_AND_AUTH_MESSAGE_API: d.wrapVerifyAndAuthMessageAPI,
 	}
 
 }
@@ -248,6 +261,58 @@ func (d *ibDecoder) wrapTickEFP(f [][]byte) {
 
 }
 
+func (d *ibDecoder) wrapMarketDataType(f [][]byte) {
+	reqID := decodeInt(f[1])
+	marketDataType := decodeInt(f[2])
+
+	d.wrapper.marketDataType(reqID, marketDataType)
+}
+
+func (d *ibDecoder) wrapAccountSummary(f [][]byte) {
+	reqID := decodeInt(f[1])
+	account := decodeString(f[2])
+	tag := decodeString(f[3])
+	value := decodeString(f[4])
+	currency := decodeString(f[5])
+
+	d.wrapper.accountSummary(reqID, account, tag, value, currency)
+}
+
+func (d *ibDecoder) wrapVerifyMessageAPI(f [][]byte) {
+	// Deprecated Function: keep it temporarily, not know how it works
+	apiData := decodeString(f[1])
+
+	d.wrapper.verifyMessageAPI(apiData)
+}
+
+func (d *ibDecoder) wrapVerifyCompleted(f [][]byte) {
+	isSuccessful := decodeBool(f[1])
+	err := decodeString(f[1])
+
+	d.wrapper.verifyCompleted(isSuccessful, err)
+}
+
+func (d *ibDecoder) wrapDisplayGroupList(f [][]byte) {
+	reqID := decodeInt(f[1])
+	groups := decodeString(f[2])
+
+	d.wrapper.displayGroupList(reqID, groups)
+}
+
+func (d *ibDecoder) wrapDisplayGroupUpdated(f [][]byte) {
+	reqID := decodeInt(f[1])
+	contractInfo := decodeString(f[2])
+
+	d.wrapper.displayGroupUpdated(reqID, contractInfo)
+}
+
+func (d *ibDecoder) wrapVerifyAndAuthMessageAPI(f [][]byte) {
+	apiData := decodeString(f[1])
+	xyzChallange := decodeString(f[2])
+
+	d.wrapper.verifyAndAuthMessageAPI(apiData, xyzChallange)
+}
+
 //--------------wrap end func ---------------------------------
 
 func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
@@ -265,6 +330,24 @@ func (d *ibDecoder) wrapExecDetailsEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
 	d.wrapper.execDetailsEnd(reqID)
+}
+
+func (d *ibDecoder) wrapTickSnapshotEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.tickSnapshotEnd(reqID)
+}
+
+func (d *ibDecoder) wrapPositionEnd(f [][]byte) {
+	// v := decodeInt(f[0])
+
+	d.wrapper.positionEnd()
+}
+
+func (d *ibDecoder) wrapAccountSummaryEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.accountSummaryEnd(reqID)
 }
 
 // ------------------------------------------------------------------
@@ -379,7 +462,12 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	o.Action = decodeString(f[10])
-	o.TotalQuantity = decodeFloat(f[11])
+	if d.version >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
+		o.TotalQuantity = decodeFloat(f[11])
+	} else {
+		o.TotalQuantity = float64(decodeInt(f[11]))
+	}
+
 	o.OrderType = decodeString(f[12])
 	o.LimitPrice = decodeFloat(f[13]) //todo: show_unset
 	o.AuxPrice = decodeFloat(f[14])   //todo: show_unset
@@ -722,8 +810,13 @@ func (d *ibDecoder) processPortfolioValueMsg(f [][]byte) {
 		c.TradingClass = decodeString(f[9])
 		f = f[1:]
 	}
+	var position float64
+	if d.version >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
+		position = decodeFloat(f[9])
+	} else {
+		position = float64(decodeInt(f[9]))
+	}
 
-	position := decodeFloat(f[9])
 	marketPrice := decodeFloat(f[10])
 	marketValue := decodeFloat(f[11])
 	averageCost := decodeFloat(f[12])
@@ -966,7 +1059,6 @@ func (d *ibDecoder) processScannerDataMsg(f [][]byte) {
 }
 func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 	var v int64
-	fmt.Println("processExecutionDataMsg")
 	if d.version < MIN_SERVER_VER_LAST_LIQUIDITY {
 		v = decodeInt(f[0])
 		f = f[1:]
@@ -1166,15 +1258,66 @@ func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
 }
 
 func (d *ibDecoder) processDeltaNeutralValidationMsg(f [][]byte) {
+	_ = decodeInt(f[0])
+	reqID := decodeInt(f[1])
+	deltaNeutralContract := DeltaNeutralContract{}
+
+	deltaNeutralContract.ContractID = decodeInt(f[2])
+	deltaNeutralContract.Delta = decodeFloat(f[3])
+	deltaNeutralContract.Price = decodeFloat(f[4])
+
+	d.wrapper.deltaNeutralValidation(reqID, deltaNeutralContract)
 
 }
 func (d *ibDecoder) processMarketDataTypeMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processCommissionReportMsg(f [][]byte) {
+	_ = decodeInt(f[0])
+	cr := CommissionReport{}
+	cr.ExecId = decodeString(f[1])
+	cr.Commission = decodeFloat(f[2])
+	cr.Currency = decodeString(f[3])
+	cr.RealizedPNL = decodeFloat(f[4])
+	cr.Yield = decodeFloat(f[5])
+	cr.YieldRedemptionDate = decodeInt(f[6])
+
+	d.wrapper.commissionReport(cr)
 
 }
 func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
+	v := decodeInt(f[0])
+	acc := decodeString(f[1])
+
+	c := new(Contract)
+	c.ContractID = decodeInt(f[2])
+	c.Symbol = decodeString(f[3])
+	c.SecurityType = decodeString(f[4])
+	c.Expiry = decodeString(f[5])
+	c.Strike = decodeFloat(f[6])
+	c.Right = decodeString(f[7])
+	c.Multiplier = decodeString(f[8])
+	c.Currency = decodeString(f[9])
+	c.LocalSymbol = decodeString(f[10])
+
+	if v >= 2 {
+		c.TradingClass = decodeString(f[11])
+		f = f[1:]
+	}
+
+	var p float64
+	if d.version >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
+		p = decodeFloat(f[11])
+	} else {
+		p = float64(decodeInt(f[11]))
+	}
+
+	var avgCost float64
+	if v >= 3 {
+		avgCost = decodeFloat(f[12])
+	}
+
+	d.wrapper.position(acc, c, p, avgCost)
 
 }
 func (d *ibDecoder) processPositionMultiMsg(f [][]byte) {

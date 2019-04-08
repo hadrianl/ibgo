@@ -31,8 +31,8 @@ func (w Wrapper) updateAccountTime(accTime time.Time) {
 	log.Printf("<updateAccountTime>: %v", accTime)
 
 }
-func (w Wrapper) updateAccountValue(tag string, val string, currency string, accName string) {
-	// log.Printf("<updateAccountValue>: accName:%v [%v]:%v currency:%v", accName, tag, val, currency)
+func (w Wrapper) updateAccountValue(tag string, value string, currency string, account string) {
+	// log.Printf("<updateAccountValue>: account:%v [%v]:%v currency:%v", account, tag, value, currency)
 
 }
 
@@ -49,22 +49,42 @@ func (w *Wrapper) accountUpdateMultiEnd(reqID int) {
 
 }
 
-func (w *Wrapper) accountSummary() {
-
+func (w Wrapper) accountSummary(reqID int64, account string, tag string, value string, currency string) {
+	log.Printf("<accountSummary>: reqID: %v account:%v [%v]:%v currency:%v", reqID, account, tag, value, currency)
 }
 
-func (w *Wrapper) accountSummaryEnd() {
+func (w Wrapper) accountSummaryEnd(reqID int64) {
+	log.Printf("<accountSummaryEnd>: reqID: %v", reqID)
+}
 
+func (w Wrapper) verifyMessageAPI(apiData string) {
+	log.Printf("<verifyMessageAPI>: apiData: %v", apiData)
+}
+
+func (w Wrapper) verifyCompleted(isSuccessful bool, err string) {
+	log.Printf("<verifyCompleted>: isSuccessful: %v error: %v", isSuccessful, err)
+}
+
+func (w Wrapper) verifyAndAuthMessageAPI(apiData string, xyzChallange string) {
+	log.Printf("<verifyCompleted>: apiData: %v xyzChallange: %v", apiData, xyzChallange)
+}
+
+func (w Wrapper) displayGroupList(reqID int64, groups string) {
+	log.Printf("<displayGroupList>: reqID: %v groups: %v", reqID, groups)
+}
+
+func (w Wrapper) displayGroupUpdated(reqID int64, contractInfo string) {
+	log.Printf("<displayGroupUpdated>: reqID: %v contractInfo: %v", reqID, contractInfo)
 }
 
 func (w Wrapper) updatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string) {
 	log.Printf("<updatePortfolio>: contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract.LocalSymbol, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
 }
-func (w *Wrapper) position() {
-
+func (w Wrapper) position(account string, contract *Contract, position float64, avgCost float64) {
+	log.Printf("<updatePortfolio>: account: %v, contract: %v position: %v, avgCost: %v", account, contract, position, avgCost)
 }
-func (w *Wrapper) positionEnd() {
-
+func (w Wrapper) positionEnd() {
+	log.Printf("<positionEnd>:...")
 }
 func (w *Wrapper) pnl() {
 
@@ -90,8 +110,13 @@ func (w Wrapper) execDetails(reqID int64, contract *Contract, execution *Executi
 func (w Wrapper) execDetailsEnd(reqID int64) {
 	log.Printf("<execDetailsEnd>: reqID: %v", reqID)
 }
-func (w *Wrapper) commissionReport() {
 
+func (w Wrapper) deltaNeutralValidation(reqID int64, deltaNeutralContract DeltaNeutralContract) {
+	log.Printf("<deltaNeutralValidation>: reqID: %v deltaNeutralContract: %v", reqID, deltaNeutralContract)
+}
+
+func (w Wrapper) commissionReport(commissionReport CommissionReport) {
+	log.Printf("<commissionReport>: commissionReport: %v", commissionReport)
 }
 func (w *Wrapper) orderBound() {
 
@@ -146,8 +171,12 @@ func (w Wrapper) tickSize(reqID int64, tickType int64, size int64) {
 	log.Printf("<tickSize>: reqID: %v tickType: %v size: %v\n", reqID, tickType, size)
 
 }
-func (w *Wrapper) tickSnapshotEnd() {
+func (w Wrapper) tickSnapshotEnd(reqID int64) {
+	log.Printf("<tickSnapshotEnd>: reqID: %v", reqID)
+}
 
+func (w Wrapper) marketDataType(reqID int64, marketDataType int64) {
+	log.Printf("<marketDataType>: reqID: %v marketDataType: %v", reqID, marketDataType)
 }
 func (w *Wrapper) tickByTickAllLast() {
 
