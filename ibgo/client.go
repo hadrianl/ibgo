@@ -212,6 +212,7 @@ func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 		execFilter.ClientID,
 		execFilter.AccountCode,
 		execFilter.Time,
+		execFilter.Symbol,
 		execFilter.SecurityType,
 		execFilter.Exchange,
 		execFilter.Side)

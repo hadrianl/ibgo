@@ -51,5 +51,6 @@ func (ib *IB) DoSomeTest() {
 
 	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, []TagValue{})
 	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
-	// ib.Client.ReqExecutions(699, ef)
+	ef := ExecutionFilter{}
+	ib.Client.ReqExecutions(699, ef)
 }

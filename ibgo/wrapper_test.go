@@ -207,7 +207,7 @@ func (w Wrapper) scannerParameters(xml string) {
 func (w Wrapper) scannerData(reqID int64, rank int64, conDetails *ContractDetails, distance string, benchmark string, projection string, legs string) {
 	log.Printf("<scannerData>: reqID:%v", reqID)
 }
-func (w *Wrapper) scannerDataEnd(reqID int64) {
+func (w Wrapper) scannerDataEnd(reqID int64) {
 	log.Printf("<scannerDataEnd>: reqID:%v", reqID)
 }
 func (w *Wrapper) histogramData() {

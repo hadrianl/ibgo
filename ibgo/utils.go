@@ -14,10 +14,10 @@ const (
 	fieldSplit byte = '\x00'
 )
 
-// bytesToInt used to convert the first 4 byte into the message size
-func bytesToInt(buf []byte) int32 {
-	return int32(binary.BigEndian.Uint32(buf))
-}
+// // bytesToInt used to convert the first 4 byte into the message size
+// func bytesToInt(buf []byte) int32 {
+// 	return int32(binary.BigEndian.Uint32(buf))
+// }
 
 func bytesToTime(buf []byte) time.Time {
 	format := "20060102 15:04:05 CST"
@@ -33,17 +33,29 @@ func bytesToTime(buf []byte) time.Time {
 func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 	sizeBuf := make([]byte, 4)
 
-	if _, err := reader.Read(sizeBuf); err != nil {
-		return nil, err
+	// if n, err := reader.Read(sizeBuf); err != nil || n != 4 {
+	// 	panic(fmt.Errorf("errReadSize: read %v err: %v", n, err))
+	// 	return nil, err
+	// }
+
+	for n, r := 0, 4; n < r; {
+		tempMsgBuf := make([]byte, r-n)
+		tn, err := reader.Read(tempMsgBuf)
+		if err != nil {
+			return nil, err
+		}
+
+		copy(sizeBuf[n:n+tn], tempMsgBuf)
+		n += tn
 	}
 	// log.Println("Get SizeBuf:", sizeBuf)
-	size := bytesToInt(sizeBuf)
+	size := int(binary.BigEndian.Uint32(sizeBuf))
 	// log.Println("Get SizeBuf:", size)
 
 	msgBuf := make([]byte, size)
 
-	// HELP: maybe there is a better way to get fixed size of bytes
-	for n, r := 0, int(size); n < r; {
+	// XXX: maybe there is a better way to get fixed size of bytes
+	for n, r := 0, size; n < r; {
 		tempMsgBuf := make([]byte, r-n)
 		tn, err := reader.Read(tempMsgBuf)
 		if err != nil {

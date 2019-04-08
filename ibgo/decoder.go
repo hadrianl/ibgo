@@ -33,7 +33,7 @@ func (d *ibDecoder) interpret(fs ...[]byte) {
 	// if decode error ocours,handle the error
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("!!!!!!errDeocde!!!!!!->%v", err)
+			fmt.Printf("!!!!!!errDeocde!!!!!!->%v", err) //TODO: handle error
 		}
 	}()
 
@@ -1091,20 +1091,18 @@ func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
-	f = f[1:]
-	reqID := decodeInt(f[0])
+	// f = f[1:]
+	// reqID := decodeInt(f[0])
 
-	rtb := &RealTimeBar{}
-	rtb.Time = decodeInt(f[1])
-	rtb.Open = decodeFloat(f[2])
-	rtb.High = decodeFloat(f[3])
-	rtb.Low = decodeFloat(f[4])
-	rtb.Close = decodeFloat(f[5])
-	rtb.Volume = decodeFloat(f[6])
-	rtb.Wap = decodeFloat(f[7])
-	rtb.Count = decodeInt(f[8])
-
-	d.wrapper.realtimeBar
+	// rtb := &RealTimeBar{}
+	// rtb.Time = decodeInt(f[1])
+	// rtb.Open = decodeFloat(f[2])
+	// rtb.High = decodeFloat(f[3])
+	// rtb.Low = decodeFloat(f[4])
+	// rtb.Close = decodeFloat(f[5])
+	// rtb.Volume = decodeFloat(f[6])
+	// rtb.Wap = decodeFloat(f[7])
+	// rtb.Count = decodeInt(f[8])
 
 }
 func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
