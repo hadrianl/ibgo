@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -71,49 +72,82 @@ func (d *ibDecoder) interpret(fs ...[]byte) {
 
 func (d *ibDecoder) setmsgID2process() {
 	d.msgID2process = map[IN]func([][]byte){
-		TICK_PRICE:                  d.processTickPriceMsg,
-		TICK_SIZE:                   d.wrapTickSize,
-		ORDER_STATUS:                d.processOrderStatusMsg,
-		ERR_MSG:                     d.wrapError,
-		OPEN_ORDER:                  d.processOpenOrder,
-		ACCT_VALUE:                  d.wrapUpdateAccountValue,
-		PORTFOLIO_VALUE:             d.processPortfolioValueMsg,
-		ACCT_UPDATE_TIME:            d.wrapUpdateAccountTime,
-		NEXT_VALID_ID:               d.wrapNextValidID,
-		CONTRACT_DATA:               d.processContractDataMsg,
-		EXECUTION_DATA:              d.processExecutionDataMsg,
-		MARKET_DEPTH:                d.wrapUpdateMktDepth,
-		MARKET_DEPTH_L2:             d.wrapUpdateMktDepthL2,
-		NEWS_BULLETINS:              d.wrapUpdateNewsBulletin,
-		MANAGED_ACCTS:               d.wrapManagedAccounts,
-		RECEIVE_FA:                  d.wrapReceiveFA,
-		HISTORICAL_DATA:             d.processHistoricalDataMsg,
-		HISTORICAL_DATA_UPDATE:      d.processHistoricalDataUpdateMsg,
-		BOND_CONTRACT_DATA:          d.processBondContractDataMsg,
-		SCANNER_PARAMETERS:          d.wrapScannerParameters,
-		SCANNER_DATA:                d.processScannerDataMsg,
-		TICK_OPTION_COMPUTATION:     d.processTickOptionComputationMsg,
-		TICK_GENERIC:                d.wrapTickGeneric,
-		TICK_STRING:                 d.wrapTickString,
-		TICK_EFP:                    d.wrapTickEFP,
-		CURRENT_TIME:                d.wrapCurrentTime,
-		REAL_TIME_BARS:              d.processRealTimeBarMsg,
-		ACCT_DOWNLOAD_END:           d.wrapAccountDownloadEnd,
-		OPEN_ORDER_END:              d.wrapOpenOrderEnd,
-		EXECUTION_DATA_END:          d.wrapExecDetailsEnd,
-		DELTA_NEUTRAL_VALIDATION:    d.processDeltaNeutralValidationMsg,
-		TICK_SNAPSHOT_END:           d.wrapTickSnapshotEnd,
-		MARKET_DATA_TYPE:            d.wrapMarketDataType,
-		COMMISSION_REPORT:           d.processCommissionReportMsg,
-		POSITION_DATA:               d.processPositionDataMsg,
-		POSITION_END:                d.wrapPositionEnd,
-		ACCOUNT_SUMMARY:             d.wrapAccountSummary,
-		ACCOUNT_SUMMARY_END:         d.wrapAccountSummaryEnd,
-		VERIFY_MESSAGE_API:          d.wrapVerifyMessageAPI,
-		VERIFY_COMPLETED:            d.wrapVerifyCompleted,
-		DISPLAY_GROUP_LIST:          d.wrapDisplayGroupList,
-		DISPLAY_GROUP_UPDATED:       d.wrapDisplayGroupUpdated,
-		VERIFY_AND_AUTH_MESSAGE_API: d.wrapVerifyAndAuthMessageAPI,
+		TICK_PRICE:              d.processTickPriceMsg,
+		TICK_SIZE:               d.wrapTickSize,
+		ORDER_STATUS:            d.processOrderStatusMsg,
+		ERR_MSG:                 d.wrapError,
+		OPEN_ORDER:              d.processOpenOrder,
+		ACCT_VALUE:              d.wrapUpdateAccountValue,
+		PORTFOLIO_VALUE:         d.processPortfolioValueMsg,
+		ACCT_UPDATE_TIME:        d.wrapUpdateAccountTime,
+		NEXT_VALID_ID:           d.wrapNextValidID,
+		CONTRACT_DATA:           d.processContractDataMsg,
+		EXECUTION_DATA:          d.processExecutionDataMsg,
+		MARKET_DEPTH:            d.wrapUpdateMktDepth,
+		MARKET_DEPTH_L2:         d.wrapUpdateMktDepthL2,
+		NEWS_BULLETINS:          d.wrapUpdateNewsBulletin,
+		MANAGED_ACCTS:           d.wrapManagedAccounts,
+		RECEIVE_FA:              d.wrapReceiveFA,
+		HISTORICAL_DATA:         d.processHistoricalDataMsg,
+		HISTORICAL_DATA_UPDATE:  d.processHistoricalDataUpdateMsg,
+		BOND_CONTRACT_DATA:      d.processBondContractDataMsg,
+		SCANNER_PARAMETERS:      d.wrapScannerParameters,
+		SCANNER_DATA:            d.processScannerDataMsg,
+		TICK_OPTION_COMPUTATION: d.processTickOptionComputationMsg,
+		TICK_GENERIC:            d.wrapTickGeneric,
+		TICK_STRING:             d.wrapTickString,
+		TICK_EFP:                d.wrapTickEFP,
+		CURRENT_TIME:            d.wrapCurrentTime,
+		REAL_TIME_BARS:          d.processRealTimeBarMsg,
+		FUNDAMENTAL_DATA:        d.wrapFundamentalData,
+		CONTRACT_DATA_END:       d.wrapContractDetailsEnd,
+
+		ACCT_DOWNLOAD_END:                        d.wrapAccountDownloadEnd,
+		OPEN_ORDER_END:                           d.wrapOpenOrderEnd,
+		EXECUTION_DATA_END:                       d.wrapExecDetailsEnd,
+		DELTA_NEUTRAL_VALIDATION:                 d.processDeltaNeutralValidationMsg,
+		TICK_SNAPSHOT_END:                        d.wrapTickSnapshotEnd,
+		MARKET_DATA_TYPE:                         d.wrapMarketDataType,
+		COMMISSION_REPORT:                        d.processCommissionReportMsg,
+		POSITION_DATA:                            d.processPositionDataMsg,
+		POSITION_END:                             d.wrapPositionEnd,
+		ACCOUNT_SUMMARY:                          d.wrapAccountSummary,
+		ACCOUNT_SUMMARY_END:                      d.wrapAccountSummaryEnd,
+		VERIFY_MESSAGE_API:                       d.wrapVerifyMessageAPI,
+		VERIFY_COMPLETED:                         d.wrapVerifyCompleted,
+		DISPLAY_GROUP_LIST:                       d.wrapDisplayGroupList,
+		DISPLAY_GROUP_UPDATED:                    d.wrapDisplayGroupUpdated,
+		VERIFY_AND_AUTH_MESSAGE_API:              d.wrapVerifyAndAuthMessageAPI,
+		VERIFY_AND_AUTH_COMPLETED:                d.wrapVerifyAndAuthCompleted,
+		POSITION_MULTI:                           d.processPositionMultiMsg,
+		POSITION_MULTI_END:                       d.wrapPositionMultiEnd,
+		ACCOUNT_UPDATE_MULTI:                     d.wrapAccountUpdateMulti,
+		ACCOUNT_UPDATE_MULTI_END:                 d.wrapAccountUpdateMultiEnd,
+		SECURITY_DEFINITION_OPTION_PARAMETER:     d.processSecurityDefinitionOptionParameterMsg,
+		SECURITY_DEFINITION_OPTION_PARAMETER_END: d.wrapSecurityDefinitionOptionParameterEndMsg,
+		SOFT_DOLLAR_TIERS:                        d.processSoftDollarTiersMsg,
+		FAMILY_CODES:                             d.processFamilyCodesMsg,
+		SYMBOL_SAMPLES:                           d.processSymbolSamplesMsg,
+		SMART_COMPONENTS:                         d.processSmartComponents,
+		TICK_REQ_PARAMS:                          d.processTickReqParams,
+		MKT_DEPTH_EXCHANGES:                      d.processMktDepthExchanges,
+		HEAD_TIMESTAMP:                           d.processHeadTimestamp,
+		TICK_NEWS:                                d.processTickNews,
+		NEWS_PROVIDERS:                           d.processNewsProviders,
+		NEWS_ARTICLE:                             d.processNewsArticle,
+		HISTORICAL_NEWS:                          d.processHistoricalNews,
+		HISTORICAL_NEWS_END:                      d.processHistoricalNewsEnd,
+		HISTOGRAM_DATA:                           d.processHistogramData,
+		REROUTE_MKT_DATA_REQ:                     d.processRerouteMktDataReq,
+		REROUTE_MKT_DEPTH_REQ:                    d.processRerouteMktDepthReq,
+		MARKET_RULE:                              d.processMarketRuleMsg,
+		PNL:                                      d.processPnLMsg,
+		PNL_SINGLE:                               d.processPnLSingleMsg,
+		HISTORICAL_TICKS:                         d.processHistoricalTicks,
+		HISTORICAL_TICKS_BID_ASK:                 d.processHistoricalTicksBidAsk,
+		HISTORICAL_TICKS_LAST:                    d.processHistoricalTicksLast,
+		TICK_BY_TICK:                             d.processTickByTickMsg,
+		ORDER_BOUND:                              d.processOrderBoundMsg,
 	}
 
 }
@@ -132,13 +166,8 @@ func (d *ibDecoder) wrapNextValidID(f [][]byte) {
 }
 
 func (d *ibDecoder) wrapManagedAccounts(f [][]byte) {
-	// accNames := strings.Split(string(f[1]), ",")
-	accNameField := bytes.Split(f[1], []byte{','})
-
-	accsList := []Account{}
-	for _, acc := range accNameField {
-		accsList = append(accsList, Account{Name: string(acc)})
-	}
+	accNames := decodeString(f[1])
+	accsList := strings.Split(accNames, ",")
 	d.wrapper.managedAccounts(accsList)
 
 }
@@ -313,6 +342,31 @@ func (d *ibDecoder) wrapVerifyAndAuthMessageAPI(f [][]byte) {
 	d.wrapper.verifyAndAuthMessageAPI(apiData, xyzChallange)
 }
 
+func (d *ibDecoder) wrapVerifyAndAuthCompleted(f [][]byte) {
+	isSuccessful := decodeBool(f[1])
+	err := decodeString(f[2])
+
+	d.wrapper.verifyAndAuthCompleted(isSuccessful, err)
+}
+
+func (d *ibDecoder) wrapAccountUpdateMulti(f [][]byte) {
+	reqID := decodeInt(f[1])
+	acc := decodeString(f[2])
+	modelCode := decodeString(f[3])
+	tag := decodeString(f[4])
+	val := decodeString(f[5])
+	currency := decodeString(f[6])
+
+	d.wrapper.accountUpdateMulti(reqID, acc, modelCode, tag, val, currency)
+}
+
+func (d *ibDecoder) wrapFundamentalData(f [][]byte) {
+	reqID := decodeInt(f[1])
+	data := decodeString(f[2])
+
+	d.wrapper.fundamentalData(reqID, data)
+}
+
 //--------------wrap end func ---------------------------------
 
 func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
@@ -348,6 +402,30 @@ func (d *ibDecoder) wrapAccountSummaryEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
 	d.wrapper.accountSummaryEnd(reqID)
+}
+
+func (d *ibDecoder) wrapPositionMultiEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.positionMultiEnd(reqID)
+}
+
+func (d *ibDecoder) wrapAccountUpdateMultiEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.accountUpdateMultiEnd(reqID)
+}
+
+func (d *ibDecoder) wrapSecurityDefinitionOptionParameterEndMsg(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.securityDefinitionOptionParameterEnd(reqID)
+}
+
+func (d *ibDecoder) wrapContractDetailsEnd(f [][]byte) {
+	reqID := decodeInt(f[1])
+
+	d.wrapper.contractDetailsEnd(reqID)
 }
 
 // ------------------------------------------------------------------
@@ -1183,20 +1261,22 @@ func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
-	// f = f[1:]
-	// reqID := decodeInt(f[0])
+	_ = f[0]
+	reqID := decodeInt(f[1])
 
-	// rtb := &RealTimeBar{}
-	// rtb.Time = decodeInt(f[1])
-	// rtb.Open = decodeFloat(f[2])
-	// rtb.High = decodeFloat(f[3])
-	// rtb.Low = decodeFloat(f[4])
-	// rtb.Close = decodeFloat(f[5])
-	// rtb.Volume = decodeFloat(f[6])
-	// rtb.Wap = decodeFloat(f[7])
-	// rtb.Count = decodeInt(f[8])
-
+	rtb := &RealTimeBar{}
+	rtb.Time = decodeInt(f[2])
+	rtb.Open = decodeFloat(f[3])
+	rtb.High = decodeFloat(f[4])
+	rtb.Low = decodeFloat(f[5])
+	rtb.Close = decodeFloat(f[6])
+	rtb.Volume = decodeInt(f[7])
+	rtb.Wap = decodeFloat(f[8])
+	rtb.Count = decodeInt(f[9])
+	// HELP: passing by value is not a good way,why not pass pointer type?
+	d.wrapper.realtimeBar(reqID, rtb.Time, rtb.Open, rtb.High, rtb.Low, rtb.Close, rtb.Volume, rtb.Wap, rtb.Count)
 }
+
 func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
 	optPrice := math.MaxFloat64
 	pvDividend := math.MaxFloat64
@@ -1321,82 +1401,412 @@ func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processPositionMultiMsg(f [][]byte) {
+	_ = decodeInt(f[0])
+	reqID := decodeInt(f[1])
+	acc := decodeString(f[2])
+
+	c := new(Contract)
+	c.ContractID = decodeInt(f[3])
+	c.Symbol = decodeString(f[4])
+	c.SecurityType = decodeString(f[5])
+	c.Expiry = decodeString(f[6])
+	c.Strike = decodeFloat(f[7])
+	c.Multiplier = decodeString(f[8])
+	c.Exchange = decodeString(f[9])
+	c.Currency = decodeString(f[10])
+	c.LocalSymbol = decodeString(f[11])
+	c.TradingClass = decodeString(f[12])
+
+	p := decodeFloat(f[13])
+	avgCost := decodeFloat(f[14])
+	modelCode := decodeString(f[15])
+
+	d.wrapper.positionMulti(reqID, acc, modelCode, c, p, avgCost)
 
 }
 func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	exchange := decodeString(f[1])
+	underlyingContractID := decodeInt(f[2])
+	tradingClass := decodeString(f[3])
+	multiplier := decodeString(f[4])
+
+	expirations := []string{}
+	for expCount := decodeInt(f[5]); expCount > 0 && expCount != math.MaxInt64; expCount-- {
+		expiration := decodeString(f[6])
+		expirations = append(expirations, expiration)
+		f = f[1:]
+	}
+	f = f[1:]
+
+	strikes := []float64{}
+	for strikeCount := decodeInt(f[5]); strikeCount > 0 && strikeCount != math.MaxInt64; strikeCount-- {
+		strike := decodeFloat(f[6])
+		strikes = append(strikes, strike)
+		f = f[1:]
+	}
+
+	d.wrapper.securityDefinitionOptionParameter(reqID, exchange, underlyingContractID, tradingClass, multiplier, expirations, strikes)
 
 }
-func (d *ibDecoder) processSecurityDefinitionOptionParameterEndMsg(f [][]byte) {
 
-}
 func (d *ibDecoder) processSoftDollarTiersMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+
+	tiers := []SoftDollarTier{}
+	for tierCount := decodeInt(f[1]); tierCount > 0 && tierCount != math.MaxInt64; tierCount-- {
+		tier := SoftDollarTier{}
+		tier.Name = decodeString(f[2])
+		tier.Value = decodeString(f[3])
+		tier.DisplayName = decodeString(f[4])
+		tiers = append(tiers, tier)
+		f = f[3:]
+	}
+
+	d.wrapper.softDollarTiers(reqID, tiers)
 
 }
 func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
+	familyCodes := []FamilyCode{}
+
+	for fcCount := decodeInt(f[0]); fcCount > 0 && fcCount != math.MaxInt64; fcCount-- {
+		familyCode := FamilyCode{}
+		familyCode.AccountID = decodeString(f[1])
+		familyCode.FamilyCode = decodeString(f[2])
+		familyCodes = append(familyCodes, familyCode)
+		f = f[2:]
+	}
+
+	d.wrapper.familyCodes(familyCodes)
 
 }
 func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	contractDescriptions := []ContractDescription{}
+	for cdCount := decodeInt(f[1]); cdCount > 0 && cdCount != math.MaxInt64; cdCount-- {
+		cd := ContractDescription{}
+		cd.Contract.ContractID = decodeInt(f[2])
+		cd.Contract.Symbol = decodeString(f[3])
+		cd.Contract.SecurityType = decodeString(f[4])
+		cd.Contract.PrimaryExchange = decodeString(f[5])
+		cd.Contract.Currency = decodeString(f[6])
+
+		cd.DerivativeSecTypes = []string{}
+
+		for sdtCount := decodeInt(f[7]); sdtCount > 0 && sdtCount != math.MaxInt64; sdtCount-- {
+			derivativeSecType := decodeString(f[8])
+			cd.DerivativeSecTypes = append(cd.DerivativeSecTypes, derivativeSecType)
+			f = f[1:]
+		}
+		contractDescriptions = append(contractDescriptions, cd)
+		f = f[6:]
+	}
+
+	d.wrapper.symbolSamples(reqID, contractDescriptions)
 
 }
 func (d *ibDecoder) processSmartComponents(f [][]byte) {
+	reqID := decodeInt(f[0])
+
+	smartComponents := []SmartComponent{}
+
+	for scmCount := decodeInt(f[1]); scmCount > 0 && scmCount != math.MaxInt64; scmCount-- {
+		smartComponent := SmartComponent{}
+		smartComponent.BitNumber = decodeInt(f[2])
+		smartComponent.Exchange = decodeString(f[3])
+		smartComponent.ExchangeLetter = decodeString(f[4])
+		smartComponents = append(smartComponents, smartComponent)
+		f = f[3:]
+	}
+
+	d.wrapper.smartComponents(reqID, smartComponents)
 
 }
 func (d *ibDecoder) processTickReqParams(f [][]byte) {
+	tickerID := decodeInt(f[0])
+	minTick := decodeFloat(f[1])
+	bboExchange := decodeString(f[2])
+	snapshotPermissions := decodeInt(f[3])
 
+	d.wrapper.tickReqParams(tickerID, minTick, bboExchange, snapshotPermissions)
 }
-func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
 
+func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
+	depthMktDataDescriptions := []DepthMktDataDescription{}
+	for descCount := decodeInt(f[0]); descCount > 0 && descCount != math.MaxInt64; descCount-- {
+		desc := DepthMktDataDescription{}
+		desc.Exchange = decodeString(f[1])
+		desc.SecurityType = decodeString(f[2])
+		if d.version >= MIN_SERVER_VER_SERVICE_DATA_TYPE {
+			desc.ListingExchange = decodeString(f[3])
+			desc.SecurityType = decodeString(f[4])
+			desc.AggGroup = decodeInt(f[5])
+			f = f[3:]
+		} else {
+			f = f[1:]
+		}
+		depthMktDataDescriptions = append(depthMktDataDescriptions, desc)
+		f = f[2:]
+	}
+
+	d.wrapper.mktDepthExchanges(depthMktDataDescriptions)
 }
 
 func (d *ibDecoder) processHeadTimestamp(f [][]byte) {
+	reqID := decodeInt(f[0])
+	headTimestamp := decodeString(f[1])
 
+	d.wrapper.headTimestamp(reqID, headTimestamp)
 }
 func (d *ibDecoder) processTickNews(f [][]byte) {
+	tickerID := decodeInt(f[0])
+	timeStamp := decodeInt(f[1])
+	providerCode := decodeString(f[2])
+	articleID := decodeString(f[3])
+	headline := decodeString(f[4])
+	extraData := decodeString(f[5])
 
+	d.wrapper.tickNews(tickerID, timeStamp, providerCode, articleID, headline, extraData)
 }
 func (d *ibDecoder) processNewsProviders(f [][]byte) {
+	newsProviders := []NewsProvider{}
 
+	for npCount := decodeInt(f[0]); npCount > 0 && npCount != math.MaxInt64; npCount-- {
+		provider := NewsProvider{}
+		provider.Name = decodeString(f[1])
+		provider.Code = decodeString(f[2])
+		newsProviders = append(newsProviders, provider)
+		f = f[2:]
+	}
+
+	d.wrapper.newsProviders(newsProviders)
 }
 func (d *ibDecoder) processNewsArticle(f [][]byte) {
+	reqID := decodeInt(f[0])
+	articleType := decodeInt(f[1])
+	articleText := decodeString(f[2])
 
+	d.wrapper.newsArticle(reqID, articleType, articleText)
 }
 func (d *ibDecoder) processHistoricalNews(f [][]byte) {
+	reqID := decodeInt(f[0])
+	time := decodeString(f[1])
+	providerCode := decodeString(f[2])
+	articleID := decodeString(f[3])
+	headline := decodeString(f[4])
 
+	d.wrapper.historicalNews(reqID, time, providerCode, articleID, headline)
 }
 func (d *ibDecoder) processHistoricalNewsEnd(f [][]byte) {
+	reqID := decodeInt(f[0])
+	hasMore := decodeBool(f[1])
 
+	d.wrapper.historicalNewsEnd(reqID, hasMore)
 }
 func (d *ibDecoder) processHistogramData(f [][]byte) {
+	reqID := decodeInt(f[0])
 
+	histogram := []HistogramData{}
+
+	for pn := decodeInt(f[1]); pn > 0 && pn != math.MaxInt64; pn-- {
+		p := HistogramData{}
+		p.Price = decodeFloat(f[2])
+		p.Count = decodeInt(f[3])
+		histogram = append(histogram, p)
+		f = f[2:]
+	}
+
+	d.wrapper.histogramData(reqID, histogram)
 }
 func (d *ibDecoder) processRerouteMktDataReq(f [][]byte) {
+	reqID := decodeInt(f[0])
+	contractID := decodeInt(f[1])
+	exchange := decodeString(f[2])
 
+	d.wrapper.rerouteMktDataReq(reqID, contractID, exchange)
 }
 func (d *ibDecoder) processRerouteMktDepthReq(f [][]byte) {
+	reqID := decodeInt(f[0])
+	contractID := decodeInt(f[1])
+	exchange := decodeString(f[2])
 
+	d.wrapper.rerouteMktDepthReq(reqID, contractID, exchange)
 }
 func (d *ibDecoder) processMarketRuleMsg(f [][]byte) {
+	marketRuleID := decodeInt(f[0])
 
+	priceIncrements := []PriceIncrement{}
+	for n := decodeInt(f[1]); n > 0 && n != math.MaxInt64; n-- {
+		priceInc := PriceIncrement{}
+		priceInc.LowEdge = decodeFloat(f[2])
+		priceInc.Increment = decodeFloat(f[3])
+		priceIncrements = append(priceIncrements, priceInc)
+		f = f[2:]
+	}
+
+	d.wrapper.marketRule(marketRuleID, priceIncrements)
 }
 func (d *ibDecoder) processPnLMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	dailyPnL := decodeFloat(f[1])
+	var unrealizedPnL float64
+	var realizedPnL float64
+
+	if d.version >= MIN_SERVER_VER_UNREALIZED_PNL {
+		unrealizedPnL = decodeFloat(f[2])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_REALIZED_PNL {
+		realizedPnL = decodeFloat(f[2])
+		f = f[1:]
+	}
+
+	d.wrapper.pnl(reqID, dailyPnL, unrealizedPnL, realizedPnL)
 
 }
 func (d *ibDecoder) processPnLSingleMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	position := decodeInt(f[1])
+	dailyPnL := decodeFloat(f[2])
+	var unrealizedPnL float64
+	var realizedPnL float64
 
+	if d.version >= MIN_SERVER_VER_UNREALIZED_PNL {
+		unrealizedPnL = decodeFloat(f[3])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_REALIZED_PNL {
+		realizedPnL = decodeFloat(f[3])
+		f = f[1:]
+	}
+
+	value := decodeFloat(f[3])
+
+	d.wrapper.pnlSingle(reqID, position, dailyPnL, unrealizedPnL, realizedPnL, value)
 }
 func (d *ibDecoder) processHistoricalTicks(f [][]byte) {
+	reqID := decodeInt(f[0])
 
+	ticks := []HistoricalTick{}
+
+	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+		historicalTick := HistoricalTick{}
+		historicalTick.Time = decodeInt(f[2])
+		_ = decodeString(f[3])
+		historicalTick.Price = decodeFloat(f[4])
+		historicalTick.Size = decodeInt(f[5])
+		ticks = append(ticks, historicalTick)
+		f = f[4:]
+	}
+	f = f[1:]
+
+	done := decodeBool(f[1])
+
+	d.wrapper.historicalTicks(reqID, ticks, done)
 }
 func (d *ibDecoder) processHistoricalTicksBidAsk(f [][]byte) {
+	reqID := decodeInt(f[0])
 
+	ticks := []HistoricalTickBidAsk{}
+
+	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+		historicalTickBidAsk := HistoricalTickBidAsk{}
+		historicalTickBidAsk.Time = decodeInt(f[2])
+
+		mask := decodeInt(f[3])
+		tickAttribBidAsk := TickAttribBidAsk{}
+		tickAttribBidAsk.AskPastHigh = mask&1 != 0
+		tickAttribBidAsk.BidPastLow = mask&2 != 0
+
+		historicalTickBidAsk.TickAttirbBidAsk = tickAttribBidAsk
+		historicalTickBidAsk.PriceBid = decodeFloat(f[4])
+		historicalTickBidAsk.PriceAsk = decodeFloat(f[5])
+		historicalTickBidAsk.SizeBid = decodeInt(f[6])
+		historicalTickBidAsk.SizeAsk = decodeInt(f[7])
+		ticks = append(ticks, historicalTickBidAsk)
+		f = f[6:]
+	}
+	f = f[1:]
+
+	done := decodeBool(f[1])
+
+	d.wrapper.historicalTicksBidAsk(reqID, ticks, done)
 }
 func (d *ibDecoder) processHistoricalTicksLast(f [][]byte) {
+	reqID := decodeInt(f[0])
 
+	ticks := []HistoricalTickLast{}
+
+	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+		historicalTickLast := HistoricalTickLast{}
+		historicalTickLast.Time = decodeInt(f[2])
+
+		mask := decodeInt(f[3])
+		tickAttribLast := TickAttribLast{}
+		tickAttribLast.PastLimit = mask&1 != 0
+		tickAttribLast.Unreported = mask&2 != 0
+
+		historicalTickLast.TickAttribLast = tickAttribLast
+		historicalTickLast.Price = decodeFloat(f[4])
+		historicalTickLast.Size = decodeInt(f[5])
+		historicalTickLast.Exchange = decodeString(f[6])
+		historicalTickLast.SpecialConditions = decodeString(f[7])
+		ticks = append(ticks, historicalTickLast)
+		f = f[6:]
+	}
+	f = f[1:]
+
+	done := decodeBool(f[1])
+
+	d.wrapper.historicalTicksLast(reqID, ticks, done)
 }
 func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	tickType := decodeInt(f[1])
+	time := decodeInt(f[2])
 
+	switch tickType {
+	case 0:
+		break
+	case 1, 2:
+		price := decodeFloat(f[3])
+		size := decodeInt(f[4])
+
+		mask := decodeInt(f[5])
+		tickAttribLast := TickAttribLast{}
+		tickAttribLast.PastLimit = mask&1 != 0
+		tickAttribLast.Unreported = mask&2 != 0
+
+		exchange := decodeString(f[6])
+		specialConditions := decodeString(f[7])
+
+		d.wrapper.tickByTickAllLast(reqID, tickType, time, price, size, tickAttribLast, exchange, specialConditions)
+	case 3:
+		bidPrice := decodeFloat(f[3])
+		askPrice := decodeFloat(f[4])
+		bidSize := decodeInt(f[5])
+		askSize := decodeInt(f[6])
+
+		mask := decodeInt(f[7])
+		tickAttribBidAsk := TickAttribBidAsk{}
+		tickAttribBidAsk.BidPastLow = mask&1 != 0
+		tickAttribBidAsk.AskPastHigh = mask&2 != 0
+
+		d.wrapper.tickByTickBidAsk(reqID, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
+	case 4:
+		midPoint := decodeFloat(f[3])
+
+		d.wrapper.tickByTickMidPoint(reqID, time, midPoint)
+	}
 }
 func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
+	reqID := decodeInt(f[0])
+	apiClientID := decodeInt(f[1])
+	apiOrderID := decodeInt(f[2])
+
+	d.wrapper.orderBound(reqID, apiClientID, apiOrderID)
 
 }
 func (d *ibDecoder) processMarketDepthL2Msg(f [][]byte) {

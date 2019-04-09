@@ -13,7 +13,7 @@ func TestIB(t *testing.T) {
 		log.Panicf("Connect failed: %v", err)
 	}
 	ib.DoSomeTest()
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 20)
 	if err := ib.DisConnect(); err != nil {
 		log.Panicf("DisConnect failed: %v", err)
 	}

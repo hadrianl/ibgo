@@ -80,7 +80,7 @@ type RealTimeBar struct {
 	High    float64
 	Low     float64
 	Close   float64
-	Volume  float64
+	Volume  int64
 	Wap     float64
 	Count   int64
 }
@@ -96,4 +96,72 @@ type CommissionReport struct {
 
 func (cr CommissionReport) String() string {
 	return fmt.Sprintf("ExecId: %v, Commission: %v, Currency: %v, RealizedPnL: %v, Yield: %v, YieldRedemptionDate: %v", cr.ExecId, cr.Commission, cr.Currency, cr.RealizedPNL, cr.Yield, cr.YieldRedemptionDate)
+}
+
+type FamilyCode struct {
+	AccountID  string
+	FamilyCode string
+}
+
+type SmartComponent struct {
+	BitNumber      int64
+	Exchange       string
+	ExchangeLetter string
+}
+
+type DepthMktDataDescription struct {
+	Exchange        string
+	SecurityType    string
+	ListingExchange string
+	ServiceDataType string
+	AggGroup        int64
+}
+
+type NewsProvider struct {
+	Code string
+	Name string
+}
+
+type HistogramData struct {
+	Price float64
+	Count int64
+}
+
+type PriceIncrement struct {
+	LowEdge   float64
+	Increment float64
+}
+
+type HistoricalTick struct {
+	Time  int64
+	Price float64
+	Size  int64
+}
+
+type HistoricalTickBidAsk struct {
+	Time             int64
+	TickAttirbBidAsk TickAttribBidAsk
+	PriceBid         float64
+	PriceAsk         float64
+	SizeBid          int64
+	SizeAsk          int64
+}
+
+type TickAttribBidAsk struct {
+	BidPastLow  bool
+	AskPastHigh bool
+}
+
+type HistoricalTickLast struct {
+	Time              int64
+	TickAttribLast    TickAttribLast
+	Price             float64
+	Size              int64
+	Exchange          string
+	SpecialConditions string
+}
+
+type TickAttribLast struct {
+	PastLimit  bool
+	Unreported bool
 }

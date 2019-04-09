@@ -83,3 +83,8 @@ type ContractDetails struct {
 	NextOptionPartial bool
 	Notes             string
 }
+
+type ContractDescription struct {
+	Contract           Contract
+	DerivativeSecTypes []string
+}

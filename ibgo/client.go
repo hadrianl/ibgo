@@ -332,6 +332,7 @@ func (ic *IbClient) goReceive() {
 	for {
 		// buf := []byte
 		msgBuf, err := readMsgBuf(ic.reader)
+		// fmt.Printf("msgBuf: %v err: %v", msgBuf, err)
 		if err, ok := err.(*net.OpError); ok {
 			if !err.Temporary() {
 				break
