@@ -735,7 +735,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	if version >= 20 {
 		deltaNeutralContractPresent := decodeBool(f[70])
 		if deltaNeutralContractPresent {
-			c.DeltaNeutralContract = DeltaNeutralContract{}
+			c.DeltaNeutralContract = new(DeltaNeutralContract)
 			c.DeltaNeutralContract.ContractID = decodeInt(f[71])
 			c.DeltaNeutralContract.Delta = decodeFloat(f[72])
 			c.DeltaNeutralContract.Price = decodeFloat(f[73])
@@ -1349,9 +1349,10 @@ func (d *ibDecoder) processDeltaNeutralValidationMsg(f [][]byte) {
 	d.wrapper.deltaNeutralValidation(reqID, deltaNeutralContract)
 
 }
-func (d *ibDecoder) processMarketDataTypeMsg(f [][]byte) {
 
-}
+// func (d *ibDecoder) processMarketDataTypeMsg(f [][]byte) {
+
+// }
 func (d *ibDecoder) processCommissionReportMsg(f [][]byte) {
 	_ = decodeInt(f[0])
 	cr := CommissionReport{}

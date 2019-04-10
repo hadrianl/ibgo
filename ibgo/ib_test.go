@@ -8,7 +8,7 @@ import (
 
 func TestIB(t *testing.T) {
 	log.SetFlags(log.Lmicroseconds)
-	ib := NewIB("127.0.0.1", 7497, 0)
+	ib := NewIB("127.0.0.1", 7497, 2)
 	if err := ib.Connect(); err != nil {
 		log.Panicf("Connect failed: %v", err)
 	}

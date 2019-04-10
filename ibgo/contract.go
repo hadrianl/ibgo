@@ -23,7 +23,7 @@ type Contract struct {
 	ComboLegs            []ComboLeg
 	// UnderComp            *UnderComp
 
-	DeltaNeutralContract DeltaNeutralContract
+	DeltaNeutralContract *DeltaNeutralContract
 }
 
 // func (c *Contract) String() string {

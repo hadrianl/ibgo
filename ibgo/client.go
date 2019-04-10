@@ -52,16 +52,24 @@ func NewIbClient(wrapper IbWrapper) *IbClient {
 	return ic
 }
 
+func (ic *IbClient) setConnState(connState int) {
+	OldConnState := ic.conn.state
+	ic.conn.state = connState
+	log.Printf("connState: %v -> %v", OldConnState, connState)
+}
+
 func (ic *IbClient) GetReqID() int64 {
 	ic.reqIDSeq++
 	return ic.reqIDSeq
 }
 
+//SetWrapper
 func (ic *IbClient) SetWrapper(wrapper IbWrapper) {
 	ic.wrapper = wrapper
 	ic.decoder = &ibDecoder{wrapper: ic.wrapper}
 }
 
+//Connect
 func (ic *IbClient) Connect(host string, port int, clientID int64) error {
 
 	ic.host = host
@@ -71,11 +79,12 @@ func (ic *IbClient) Connect(host string, port int, clientID int64) error {
 		return err
 	}
 
-	ic.conn.setState(CONNECTING)
+	ic.setConnState(CONNECTING)
 	return nil
 	// 连接后开始
 }
 
+//Disconnect
 func (ic *IbClient) Disconnect() error {
 
 	ic.terminatedSignal <- 1
@@ -87,8 +96,33 @@ func (ic *IbClient) Disconnect() error {
 
 	defer log.Println("Disconnected!")
 	ic.wg.Wait()
-	ic.conn.setState(DISCONNECTED)
+	ic.setConnState(DISCONNECTED)
 	return nil
+}
+
+// IsConnected check if there is a connection to TWS or GateWay
+func (ic *IbClient) IsConnected() bool {
+	return ic.conn.state == CONNECTED
+}
+
+// send the clientId to TWS or Gateway
+func (ic *IbClient) startAPI() error {
+	var startAPI []byte
+	v := 2
+	if ic.serverVersion >= MIN_SERVER_VER_OPTIONAL_CAPABILITIES {
+		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID, "")
+	} else {
+		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID)
+	}
+
+	log.Println("Start API:", startAPI)
+	if _, err := ic.writer.Write(startAPI); err != nil {
+		return err
+	}
+
+	err := ic.writer.Flush()
+
+	return err
 }
 
 // handshake with the TWS or GateWay to ensure the version
@@ -132,30 +166,10 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	ic.conn.setState(CONNECTED)
+	ic.setConnState(CONNECTED)
 	ic.wrapper.connectAck()
 
 	return nil
-}
-
-// send the clientId to TWS or Gateway
-func (ic *IbClient) startAPI() error {
-	var startAPI []byte
-	v := 2
-	if ic.serverVersion >= MIN_SERVER_VER_OPTIONAL_CAPABILITIES {
-		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID, "")
-	} else {
-		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID)
-	}
-
-	log.Println("Start API:", startAPI)
-	if _, err := ic.writer.Write(startAPI); err != nil {
-		return err
-	}
-
-	err := ic.writer.Flush()
-
-	return err
 }
 
 func (ic *IbClient) reset() {
@@ -176,6 +190,117 @@ func (ic *IbClient) reset() {
 
 // ---------------req func ----------------------------------------------
 
+/*
+Market Data
+*/
+
+/* ReqMktData
+Call this function to request market data. The market data
+        will be returned by the tickPrice and tickSize events.
+
+        reqId: TickerId - The ticker id. Must be a unique value. When the
+            market data returns, it will be identified by this tag. This is
+            also used when canceling the market data.
+        contract:Contract - This structure contains a description of the
+            Contractt for which market data is being requested.
+        genericTickList:str - A commma delimited list of generic tick types.
+            Tick types can be found in the Generic Tick Types page.
+            Prefixing w/ 'mdoff' indicates that top mkt data shouldn't tick.
+            You can specify the news source by postfixing w/ ':<source>.
+            Example: "mdoff,292:FLY+BRF"
+        snapshot:bool - Check to return a single snapshot of Market data and
+            have the market data subscription cancel. Do not enter any
+            genericTicklist values if you use snapshots.
+        regulatorySnapshot: bool - With the US Value Snapshot Bundle for stocks,
+            regulatory snapshots are available for 0.01 USD each.
+        mktDataOptions:TagValueList - For internal use only.
+            Use default value XYZ.
+*/
+func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList string, snapshot bool, regulatorySnapshot bool, mktDataOptions []TagValue) {
+	switch {
+	case ic.serverVersion < MIN_SERVER_VER_DELTA_NEUTRAL && contract.DeltaNeutralContract != nil:
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
+		return
+	case ic.serverVersion < MIN_SERVER_VER_REQ_MKT_DATA_CONID && contract.ContractID > 0:
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
+		return
+	case ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "":
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqMktData.")
+		return
+	}
+
+	v := 11
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_MKT_DATA,
+		v,
+		reqID,
+	)
+
+	if ic.serverVersion >= MIN_SERVER_VER_REQ_MKT_DATA_CONID {
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+
+	if contract.SecurityType == "BAG" {
+		comboLegsCount := len(contract.ComboLegs)
+		fields = append(fields, comboLegsCount)
+		for _, comboLeg := range contract.ComboLegs {
+			fields = append(fields,
+				comboLeg.ContractID,
+				comboLeg.Ratio,
+				comboLeg.Action,
+				comboLeg.Exchange)
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_DELTA_NEUTRAL {
+		if contract.DeltaNeutralContract != nil {
+			fields = append(fields,
+				true,
+				contract.DeltaNeutralContract.ContractID,
+				contract.DeltaNeutralContract.Delta,
+				contract.DeltaNeutralContract.Price)
+		} else {
+			fields = append(fields, false)
+		}
+	}
+
+	fields = append(fields,
+		genericTickList,
+		snapshot)
+
+	if ic.serverVersion >= MIN_SERVER_VER_REQ_SMART_COMPONENTS {
+		fields = append(fields, regulatorySnapshot)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		if mktDataOptions != nil {
+			panic("not supported")
+		}
+		fields = append(fields, "")
+	}
+
+	msg := makeMsgBuf(fields...)
+	ic.reqChan <- msg
+}
+
+//ReqCurrentTime Asks the current system time on the server side.
 func (ic *IbClient) ReqCurrentTime() {
 	v := 1
 	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
@@ -183,7 +308,7 @@ func (ic *IbClient) ReqCurrentTime() {
 	ic.reqChan <- msg
 }
 
-// reqAutoOpenOrders will make the client access to the TWS Orders (only if clientId=0)
+// ReqAutoOpenOrders will make the client access to the TWS Orders (only if clientId=0)
 func (ic *IbClient) ReqAutoOpenOrders(autoBind bool) {
 	v := 1
 	msg := makeMsgBuf(REQ_AUTO_OPEN_ORDERS, v, autoBind)
@@ -224,7 +349,7 @@ func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTime string, duration string, barSize string, whatToShow string, useRTH bool, formatDate int, keepUpToDate bool, chartOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
 		if contract.TradingClass != "" || contract.ContractID > 0 {
-			ic.wrapper.error(reqID, UPDATE_TWS.Code, UPDATE_TWS.Msg)
+			ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg)
 		}
 	}
 
@@ -323,6 +448,7 @@ requestLoop:
 }
 
 //goReceive receive the msg from the socket, get the fields and put them into msgChan
+//goReceive handle the msgBuf which is different from the offical.Not continuously read, but split first and then decode
 func (ic *IbClient) goReceive() {
 	// defer
 	log.Println("Start goReceive!")
@@ -379,7 +505,7 @@ decodeLoop:
 // Run make the event loop run, all make sense after run!
 func (ic *IbClient) Run() error {
 	if ic.conn.state == DISCONNECTED {
-		return errors.New("IbClient is DISCONNECTED!!!")
+		return errors.New("ibClient is DISCONNECTED")
 	}
 	log.Println("RUN Client")
 	ic.wg.Add(3)

@@ -1,12 +1,12 @@
 package ibgo
 
 type IbError struct {
-	Code int64
-	Msg  string
+	code int64
+	msg  string
 }
 
 func (ie IbError) Error() string {
-	return ie.Msg
+	return ie.msg
 }
 
 var (
