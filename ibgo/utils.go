@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	fieldSplit byte = '\x00'
+	fieldSplit byte    = '\x00'
+	UNSETFLOAT float64 = math.MaxFloat64
+	UNSETINT   int64   = math.MaxInt64
 )
 
 // // bytesToInt used to convert the first 4 byte into the message size
@@ -128,6 +130,17 @@ func splitMsgBuf(data []byte) [][]byte {
 
 func decodeInt(field []byte) int64 {
 	if bytes.Equal(field, []byte{}) {
+		return 0
+	}
+	i, err := strconv.ParseInt(string(field), 10, 64)
+	if err != nil {
+		log.Panicf("errDecodeInt: %v", err)
+	}
+	return i
+}
+
+func decodeIntCheckUnset(field []byte) int64 {
+	if bytes.Equal(field, []byte{}) {
 		return math.MaxInt64
 	}
 	i, err := strconv.ParseInt(string(field), 10, 64)
@@ -138,6 +151,19 @@ func decodeInt(field []byte) int64 {
 }
 
 func decodeFloat(field []byte) float64 {
+	if bytes.Equal(field, []byte{}) || bytes.Equal(field, []byte("None")) {
+		return 0.0
+	}
+
+	f, err := strconv.ParseFloat(string(field), 64)
+	if err != nil {
+		log.Panicf("errDecodeFloat: %v", err)
+	}
+
+	return f
+}
+
+func decodeFloatCheckUnset(field []byte) float64 {
 	if bytes.Equal(field, []byte{}) || bytes.Equal(field, []byte("None")) {
 		return math.MaxFloat64
 	}

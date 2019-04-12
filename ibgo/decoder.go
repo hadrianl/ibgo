@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -547,8 +546,18 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	o.OrderType = decodeString(f[12])
-	o.LimitPrice = decodeFloat(f[13]) //todo: show_unset
-	o.AuxPrice = decodeFloat(f[14])   //todo: show_unset
+	if version < 29 {
+		o.LimitPrice = decodeFloat(f[13])
+	} else {
+		o.LimitPrice = decodeFloatCheckUnset(f[13])
+	}
+
+	if version < 30 {
+		o.AuxPrice = decodeFloat(f[14])
+	} else {
+		o.AuxPrice = decodeFloatCheckUnset(f[14])
+	}
+
 	o.TIF = decodeString(f[15])
 	o.OCAGroup = decodeString(f[16])
 	o.Account = decodeString(f[17])
@@ -580,7 +589,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	o.GoodTillDate = decodeString(f[32])
 
 	o.Rule80A = decodeString(f[33])
-	o.PercentOffset = decodeFloat(f[34]) //show_unset
+	o.PercentOffset = decodeFloatCheckUnset(f[34]) //show_unset
 	o.SettlingFirm = decodeString(f[35])
 	o.ShortSaleSlot = decodeInt(f[36])
 	o.DesignatedLocation = decodeString(f[37])
@@ -593,29 +602,29 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	o.AuctionStrategy = decodeInt(f[38])
-	o.StartingPrice = decodeFloat(f[39])   //show_unset
-	o.StockRefPrice = decodeFloat(f[40])   //show_unset
-	o.Delta = decodeFloat(f[41])           //show_unset
-	o.StockRangeLower = decodeFloat(f[42]) //show_unset
-	o.StockRangeUpper = decodeFloat(f[43]) //show_unset
+	o.StartingPrice = decodeFloatCheckUnset(f[39])   //show_unset
+	o.StockRefPrice = decodeFloatCheckUnset(f[40])   //show_unset
+	o.Delta = decodeFloatCheckUnset(f[41])           //show_unset
+	o.StockRangeLower = decodeFloatCheckUnset(f[42]) //show_unset
+	o.StockRangeUpper = decodeFloatCheckUnset(f[43]) //show_unset
 	o.DisplaySize = decodeInt(f[44])
 
 	o.BlockOrder = decodeBool(f[45])
 	o.SweepToFill = decodeBool(f[46])
 	o.AllOrNone = decodeBool(f[47])
-	o.MinQty = decodeInt(f[48]) //show_unset
+	o.MinQty = decodeIntCheckUnset(f[48]) //show_unset
 	o.OCAType = decodeInt(f[49])
 	o.ETradeOnly = decodeBool(f[50])
 	o.FirmQuoteOnly = decodeBool(f[51])
-	o.NBBOPriceCap = decodeFloat(f[52]) //show_unset
+	o.NBBOPriceCap = decodeFloatCheckUnset(f[52]) //show_unset
 
 	o.ParentID = decodeInt(f[53])
 	o.TriggerMethod = decodeInt(f[54])
 
-	o.Volatility = decodeFloat(f[55]) //show_unset
+	o.Volatility = decodeFloatCheckUnset(f[55]) //show_unset
 	o.VolatilityType = decodeInt(f[56])
 	o.DeltaNeutralOrderType = decodeString(f[57])
-	o.DeltaNeutralAuxPrice = decodeFloat(f[58])
+	o.DeltaNeutralAuxPrice = decodeFloatCheckUnset(f[58])
 
 	if version >= 27 && o.DeltaNeutralOrderType != "" {
 		o.DeltaNeutralContractID = decodeInt(f[59])
@@ -637,20 +646,20 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 
 	o.ReferencePriceType = decodeInt(f[60])
 
-	o.TrailStopPrice = decodeFloat(f[61])
+	o.TrailStopPrice = decodeFloatCheckUnset(f[61])
 
 	if version >= 30 {
-		o.TrailingPercent = decodeFloat(f[62]) //show_unset
+		o.TrailingPercent = decodeFloatCheckUnset(f[62]) //show_unset
 		f = f[1:]
 	}
 
-	o.BasisPoints = decodeFloat(f[62])
-	o.BasisPointsType = decodeInt(f[63])
+	o.BasisPoints = decodeFloatCheckUnset(f[62])
+	o.BasisPointsType = decodeIntCheckUnset(f[63])
 	c.ComboLegsDescription = decodeString(f[64])
 
 	if version >= 29 {
 		c.ComboLegs = []ComboLeg{}
-		for comboLegsCount := decodeInt(f[65]); comboLegsCount > 0 && comboLegsCount != math.MaxInt64; comboLegsCount-- {
+		for comboLegsCount := decodeInt(f[65]); comboLegsCount > 0; comboLegsCount-- {
 			fmt.Println("comboLegsCount:", comboLegsCount)
 			comboleg := ComboLeg{}
 			comboleg.ContractID = decodeInt(f[66])
@@ -667,9 +676,9 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		f = f[1:]
 
 		o.OrderComboLegs = []OrderComboLeg{}
-		for orderComboLegsCount := decodeInt(f[65]); orderComboLegsCount > 0 && orderComboLegsCount != math.MaxInt64; orderComboLegsCount-- {
+		for orderComboLegsCount := decodeInt(f[65]); orderComboLegsCount > 0; orderComboLegsCount-- {
 			orderComboLeg := OrderComboLeg{}
-			orderComboLeg.Price = decodeFloat(f[66])
+			orderComboLeg.Price = decodeFloatCheckUnset(f[66])
 			o.OrderComboLegs = append(o.OrderComboLegs, orderComboLeg)
 			f = f[1:]
 		}
@@ -678,7 +687,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 
 	if version >= 26 {
 		o.SmartComboRoutingParams = []TagValue{}
-		for smartComboRoutingParamsCount := decodeInt(f[65]); smartComboRoutingParamsCount > 0 && smartComboRoutingParamsCount != math.MaxInt64; smartComboRoutingParamsCount-- {
+		for smartComboRoutingParamsCount := decodeInt(f[65]); smartComboRoutingParamsCount > 0; smartComboRoutingParamsCount-- {
 			tagValue := TagValue{}
 			tagValue.Tag = decodeString(f[66])
 			tagValue.Value = decodeString(f[67])
@@ -690,22 +699,22 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	if version >= 20 {
-		o.ScaleInitLevelSize = decodeInt(f[65]) //show_unset
-		o.ScaleSubsLevelSize = decodeInt(f[66]) //show_unset
+		o.ScaleInitLevelSize = decodeIntCheckUnset(f[65]) //show_unset
+		o.ScaleSubsLevelSize = decodeIntCheckUnset(f[66]) //show_unset
 	} else {
-		o.NotSuppScaleNumComponents = decodeInt(f[65])
-		o.ScaleInitLevelSize = decodeInt(f[66])
+		o.NotSuppScaleNumComponents = decodeIntCheckUnset(f[65])
+		o.ScaleInitLevelSize = decodeIntCheckUnset(f[66])
 	}
 
-	o.ScalePriceIncrement = decodeFloat(f[67])
+	o.ScalePriceIncrement = decodeFloatCheckUnset(f[67])
 
-	if version >= 28 && o.ScalePriceIncrement != math.MaxFloat64 && o.ScalePriceIncrement > 0.0 {
-		o.ScalePriceAdjustValue = decodeFloat(f[68])
-		o.ScalePriceAdjustInterval = decodeInt(f[69])
-		o.ScaleProfitOffset = decodeFloat(f[70])
+	if version >= 28 && o.ScalePriceIncrement != UNSETFLOAT && o.ScalePriceIncrement > 0.0 {
+		o.ScalePriceAdjustValue = decodeFloatCheckUnset(f[68])
+		o.ScalePriceAdjustInterval = decodeIntCheckUnset(f[69])
+		o.ScaleProfitOffset = decodeFloatCheckUnset(f[70])
 		o.ScaleAutoReset = decodeBool(f[71])
-		o.ScaleInitPosition = decodeInt(f[72])
-		o.ScaleInitFillQty = decodeInt(f[73])
+		o.ScaleInitPosition = decodeIntCheckUnset(f[72])
+		o.ScaleInitFillQty = decodeIntCheckUnset(f[73])
 		o.ScaleRandomPercent = decodeBool(f[74])
 		f = f[7:]
 	}
@@ -748,7 +757,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		o.AlgoStrategy = decodeString(f[70])
 		if o.AlgoStrategy != "" {
 			o.AlgoParams = []TagValue{}
-			for algoParamsCount := decodeInt(f[71]); algoParamsCount > 0 && algoParamsCount != math.MaxInt64; algoParamsCount-- {
+			for algoParamsCount := decodeInt(f[71]); algoParamsCount > 0; algoParamsCount-- {
 				tagValue := TagValue{}
 				tagValue.Tag = decodeString(f[72])
 				tagValue.Value = decodeString(f[73])
@@ -784,9 +793,9 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	orderState.MaintenanceMarginAfter = decodeString(f[73])
 	orderState.EquityWithLoanAfter = decodeString(f[74])
 
-	orderState.Commission = decodeFloat(f[75])
-	orderState.MinCommission = decodeFloat(f[76])
-	orderState.MaxCommission = decodeFloat(f[77])
+	orderState.Commission = decodeFloatCheckUnset(f[75])
+	orderState.MinCommission = decodeFloatCheckUnset(f[76])
+	orderState.MaxCommission = decodeFloatCheckUnset(f[77])
 	orderState.CommissionCurrency = decodeString(f[78])
 	orderState.WarningText = decodeString(f[79])
 
@@ -807,7 +816,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		}
 
 		o.Conditions = []OrderConditioner{}
-		if conditionsSize := decodeInt(f[80]); conditionsSize > 0 && conditionsSize != math.MaxInt64 {
+		if conditionsSize := decodeInt(f[80]); conditionsSize > 0 {
 			for ; conditionsSize > 0; conditionsSize-- {
 				conditionType := decodeInt(f[81])
 				cond, condSize := InitOrderCondition(conditionType)
@@ -983,7 +992,7 @@ func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 
 	if v >= 7 {
 		cd.SecurityIDList = []TagValue{}
-		for secIDListCount := decodeInt(f[18]); secIDListCount > 0 && secIDListCount != math.MaxInt64; secIDListCount-- {
+		for secIDListCount := decodeInt(f[18]); secIDListCount > 0; secIDListCount-- {
 			tagValue := TagValue{}
 			tagValue.Tag = decodeString(f[19])
 			tagValue.Value = decodeString(f[20])
@@ -1278,12 +1287,12 @@ func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
 }
 
 func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
-	optPrice := math.MaxFloat64
-	pvDividend := math.MaxFloat64
-	gamma := math.MaxFloat64
-	vega := math.MaxFloat64
-	theta := math.MaxFloat64
-	undPrice := math.MaxFloat64
+	optPrice := UNSETFLOAT
+	pvDividend := UNSETFLOAT
+	gamma := UNSETFLOAT
+	vega := UNSETFLOAT
+	theta := UNSETFLOAT
+	undPrice := UNSETFLOAT
 
 	v := decodeInt(f[0])
 	reqID := decodeInt(f[1])
@@ -1309,28 +1318,28 @@ func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
 
 	switch {
 	case impliedVol < 0:
-		impliedVol = math.MaxFloat64
+		impliedVol = UNSETFLOAT
 		fallthrough
 	case delta == -2:
-		delta = math.MaxFloat64
+		delta = UNSETFLOAT
 		fallthrough
 	case optPrice == -1:
-		optPrice = math.MaxFloat64
+		optPrice = UNSETFLOAT
 		fallthrough
 	case pvDividend == -1:
-		pvDividend = math.MaxFloat64
+		pvDividend = UNSETFLOAT
 		fallthrough
 	case gamma == -2:
-		gamma = math.MaxFloat64
+		gamma = UNSETFLOAT
 		fallthrough
 	case vega == -2:
-		vega = math.MaxFloat64
+		vega = UNSETFLOAT
 		fallthrough
 	case theta == -2:
-		theta = math.MaxFloat64
+		theta = UNSETFLOAT
 		fallthrough
 	case undPrice == -1:
-		undPrice = math.MaxFloat64
+		undPrice = UNSETFLOAT
 	}
 
 	d.wrapper.tickOptionComputation(reqID, tickType, impliedVol, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)
@@ -1433,7 +1442,7 @@ func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
 	multiplier := decodeString(f[4])
 
 	expirations := []string{}
-	for expCount := decodeInt(f[5]); expCount > 0 && expCount != math.MaxInt64; expCount-- {
+	for expCount := decodeInt(f[5]); expCount > 0; expCount-- {
 		expiration := decodeString(f[6])
 		expirations = append(expirations, expiration)
 		f = f[1:]
@@ -1441,7 +1450,7 @@ func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
 	f = f[1:]
 
 	strikes := []float64{}
-	for strikeCount := decodeInt(f[5]); strikeCount > 0 && strikeCount != math.MaxInt64; strikeCount-- {
+	for strikeCount := decodeInt(f[5]); strikeCount > 0; strikeCount-- {
 		strike := decodeFloat(f[6])
 		strikes = append(strikes, strike)
 		f = f[1:]
@@ -1455,7 +1464,7 @@ func (d *ibDecoder) processSoftDollarTiersMsg(f [][]byte) {
 	reqID := decodeInt(f[0])
 
 	tiers := []SoftDollarTier{}
-	for tierCount := decodeInt(f[1]); tierCount > 0 && tierCount != math.MaxInt64; tierCount-- {
+	for tierCount := decodeInt(f[1]); tierCount > 0; tierCount-- {
 		tier := SoftDollarTier{}
 		tier.Name = decodeString(f[2])
 		tier.Value = decodeString(f[3])
@@ -1470,7 +1479,7 @@ func (d *ibDecoder) processSoftDollarTiersMsg(f [][]byte) {
 func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
 	familyCodes := []FamilyCode{}
 
-	for fcCount := decodeInt(f[0]); fcCount > 0 && fcCount != math.MaxInt64; fcCount-- {
+	for fcCount := decodeInt(f[0]); fcCount > 0; fcCount-- {
 		familyCode := FamilyCode{}
 		familyCode.AccountID = decodeString(f[1])
 		familyCode.FamilyCode = decodeString(f[2])
@@ -1484,7 +1493,7 @@ func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
 func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
 	reqID := decodeInt(f[0])
 	contractDescriptions := []ContractDescription{}
-	for cdCount := decodeInt(f[1]); cdCount > 0 && cdCount != math.MaxInt64; cdCount-- {
+	for cdCount := decodeInt(f[1]); cdCount > 0; cdCount-- {
 		cd := ContractDescription{}
 		cd.Contract.ContractID = decodeInt(f[2])
 		cd.Contract.Symbol = decodeString(f[3])
@@ -1494,7 +1503,7 @@ func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
 
 		cd.DerivativeSecTypes = []string{}
 
-		for sdtCount := decodeInt(f[7]); sdtCount > 0 && sdtCount != math.MaxInt64; sdtCount-- {
+		for sdtCount := decodeInt(f[7]); sdtCount > 0; sdtCount-- {
 			derivativeSecType := decodeString(f[8])
 			cd.DerivativeSecTypes = append(cd.DerivativeSecTypes, derivativeSecType)
 			f = f[1:]
@@ -1511,7 +1520,7 @@ func (d *ibDecoder) processSmartComponents(f [][]byte) {
 
 	smartComponents := []SmartComponent{}
 
-	for scmCount := decodeInt(f[1]); scmCount > 0 && scmCount != math.MaxInt64; scmCount-- {
+	for scmCount := decodeInt(f[1]); scmCount > 0; scmCount-- {
 		smartComponent := SmartComponent{}
 		smartComponent.BitNumber = decodeInt(f[2])
 		smartComponent.Exchange = decodeString(f[3])
@@ -1534,7 +1543,7 @@ func (d *ibDecoder) processTickReqParams(f [][]byte) {
 
 func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
 	depthMktDataDescriptions := []DepthMktDataDescription{}
-	for descCount := decodeInt(f[0]); descCount > 0 && descCount != math.MaxInt64; descCount-- {
+	for descCount := decodeInt(f[0]); descCount > 0; descCount-- {
 		desc := DepthMktDataDescription{}
 		desc.Exchange = decodeString(f[1])
 		desc.SecurityType = decodeString(f[2])
@@ -1572,7 +1581,7 @@ func (d *ibDecoder) processTickNews(f [][]byte) {
 func (d *ibDecoder) processNewsProviders(f [][]byte) {
 	newsProviders := []NewsProvider{}
 
-	for npCount := decodeInt(f[0]); npCount > 0 && npCount != math.MaxInt64; npCount-- {
+	for npCount := decodeInt(f[0]); npCount > 0; npCount-- {
 		provider := NewsProvider{}
 		provider.Name = decodeString(f[1])
 		provider.Code = decodeString(f[2])
@@ -1609,7 +1618,7 @@ func (d *ibDecoder) processHistogramData(f [][]byte) {
 
 	histogram := []HistogramData{}
 
-	for pn := decodeInt(f[1]); pn > 0 && pn != math.MaxInt64; pn-- {
+	for pn := decodeInt(f[1]); pn > 0; pn-- {
 		p := HistogramData{}
 		p.Price = decodeFloat(f[2])
 		p.Count = decodeInt(f[3])
@@ -1637,7 +1646,7 @@ func (d *ibDecoder) processMarketRuleMsg(f [][]byte) {
 	marketRuleID := decodeInt(f[0])
 
 	priceIncrements := []PriceIncrement{}
-	for n := decodeInt(f[1]); n > 0 && n != math.MaxInt64; n-- {
+	for n := decodeInt(f[1]); n > 0; n-- {
 		priceInc := PriceIncrement{}
 		priceInc.LowEdge = decodeFloat(f[2])
 		priceInc.Increment = decodeFloat(f[3])
@@ -1692,7 +1701,7 @@ func (d *ibDecoder) processHistoricalTicks(f [][]byte) {
 
 	ticks := []HistoricalTick{}
 
-	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+	for tickCount := decodeInt(f[1]); tickCount > 0; tickCount-- {
 		historicalTick := HistoricalTick{}
 		historicalTick.Time = decodeInt(f[2])
 		_ = decodeString(f[3])
@@ -1712,7 +1721,7 @@ func (d *ibDecoder) processHistoricalTicksBidAsk(f [][]byte) {
 
 	ticks := []HistoricalTickBidAsk{}
 
-	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+	for tickCount := decodeInt(f[1]); tickCount > 0; tickCount-- {
 		historicalTickBidAsk := HistoricalTickBidAsk{}
 		historicalTickBidAsk.Time = decodeInt(f[2])
 
@@ -1740,7 +1749,7 @@ func (d *ibDecoder) processHistoricalTicksLast(f [][]byte) {
 
 	ticks := []HistoricalTickLast{}
 
-	for tickCount := decodeInt(f[1]); tickCount > 0 && tickCount != math.MaxInt64; tickCount-- {
+	for tickCount := decodeInt(f[1]); tickCount > 0; tickCount-- {
 		historicalTickLast := HistoricalTickLast{}
 		historicalTickLast.Time = decodeInt(f[2])
 

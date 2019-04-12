@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 )
 
-type testingStruct struct {
-	A  int64
-	BS *B
-}
-type B struct {
-	C int64
-}
+// type testingStruct struct {
+// 	A  int64
+// 	BS *B
+// }
+// type B struct {
+// 	C int64
+// }
 
 func main() {
 	// f := ""
@@ -18,12 +19,12 @@ func main() {
 	// c := []byte(" ")
 	// fmt.Println(len(bytes.Split(b, c)))
 	// fmt.Println("string:", f, "byte:", b, c)
-	var t []testingStruct
-	fmt.Println(t)
-	fmt.Println(len(t))
-	fmt.Println(t == nil)
-	t = []testingStruct{}
-	fmt.Println(t == nil)
+	// var t []testingStruct
+	// fmt.Println(t)
+	// fmt.Println(len(t))
+	// fmt.Println(t == nil)
+	// t = []testingStruct{}
+	// fmt.Println(t == nil)
 	// fmt.Println(new(testingStruct) == nil)
 	// fmt.Println(&testingStruct{} == nil)
 	// var ts *testingStruct
@@ -32,4 +33,6 @@ func main() {
 	// fmt.Println(t == nil)
 	// fmt.Println(t.BS)
 	// fmt.Println(t.BS == nil)
+	i, err := strconv.ParseInt(string([]byte{'1'}), 10, 64)
+	fmt.Println(i, err)
 }
