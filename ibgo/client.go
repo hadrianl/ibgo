@@ -300,6 +300,568 @@ func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList s
 	ic.reqChan <- msg
 }
 
+//CancelMktData
+func (ic *IbClient) CancelMktData(reqID int64) {
+	v := 2
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		CANCEL_MKT_DATA,
+		v,
+		reqID,
+	)
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+/*ReqMarketDataType
+The API can receive frozen market data from Trader
+        Workstation. Frozen market data is the last data recorded in our system.
+        During normal trading hours, the API receives real-time market data. If
+        you use this function, you are telling TWS to automatically switch to
+        frozen market data after the close. Then, before the opening of the next
+        trading day, market data will automatically switch back to real-time
+        market data.
+
+        marketDataType:int - 1 for real-time streaming market data or 2 for
+            frozen market data
+*/
+func (ic *IbClient) ReqMarketDataType(marketDataType int64) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_MARKET_DATA_TYPE {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market data type requests.")
+		return
+	}
+
+	v := 1
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_MARKET_DATA_TYPE, v, marketDataType)
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqSmartComponents(reqID int64, bboExchange string) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_SMART_COMPONENTS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support smart components request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_SMART_COMPONENTS, reqID, bboExchange)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqMarketRule(marketRuleID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_MARKET_RULES {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support market rule requests.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_MARKET_RULE, marketRuleID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqTickByTickData(reqID int64, contract *Contract, tickType string, numberOfTicks int64, ignoreSize bool) {
+	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK_IGNORE_SIZE {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support ignoreSize and numberOfTicks parameters in tick-by-tick data requests.")
+		return
+	}
+
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_TICK_BY_TICK_DATA,
+		reqID,
+		contract.ContractID,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol,
+		contract.TradingClass,
+		tickType)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TICK_BY_TICK_IGNORE_SIZE {
+		fields = append(fields, numberOfTicks, ignoreSize)
+	}
+
+	msg := makeMsgBuf(fields)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelTickByTickData(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
+		return
+	}
+
+	msg := makeMsgBuf(CANCEL_TICK_BY_TICK_DATA, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*
+   ##########################################################################
+   ################## Options
+   ##########################################################################
+*/
+
+/*CalculateImpliedVolatility
+Call this function to calculate volatility for a supplied
+        option price and underlying price. Result will be delivered
+        via EWrapper.tickOptionComputation()
+
+        reqId:TickerId -  The request id.
+        contract:Contract -  Describes the contract.
+        optionPrice:double - The price of the option.
+        underPrice:double - Price of the underlying.
+*/
+func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, optionPrice float64, underPrice float64, impVolOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
+		return
+	}
+
+	v := 3
+
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_CALC_IMPLIED_VOLAT,
+		v,
+		reqID,
+		contract.ContractID,
+		Contract.Symbol,
+		contract.SecurityID,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+
+	fields = append(fields, optionPrice, underPrice)
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		tagValuesCount := len(impVolOptions)
+		fields = append(fields, tagValuesCount)
+		for _, tv := range impVolOptions {
+			fields = append(fields, tv)
+		}
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volatility float64, underPrice float64, optPrcOptions []TagValue) {
+
+	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
+		return
+	}
+
+	v := 3
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_CALC_OPTION_PRICE,
+		v,
+		reqID,
+		contract.ContractID,
+		Contract.Symbol,
+		contract.SecurityID,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+
+	fields = append(fields, volatility, underPrice)
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		tagValuesCount := len(impVolOptions)
+		fields = append(fields, tagValuesCount)
+		for _, tv := range impVolOptions {
+			fields = append(fields, tv)
+		}
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelCalculateOptionPrice(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(CANCEL_CALC_OPTION_PRICE, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*ExerciseOptions
+reqId:TickerId - The ticker id. multipleust be a unique value.
+        contract:Contract - This structure contains a description of the
+            contract to be exercised
+        exerciseAction:int - Specifies whether you want the option to lapse
+            or be exercised.
+            Values are 1 = exercise, 2 = lapse.
+        exerciseQuantity:int - The quantity you want to exercise.
+        account:str - destination account
+        override:int - Specifies whether your setting will override the system's
+            natural action. For example, if your action is "exercise" and the
+            option is not in-the-money, by natural action the option would not
+            exercise. If you have override set to "yes" the natural action would
+             be overridden and the out-of-the money option would be exercised.
+            Values are: 0 = no, 1 = yes.
+*/
+func (ic *IbClient) ExerciseOptions(reqID int64, contract *Contract, exerciseAction int, exerciseQuantity int, account string, override int) {
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId, multiplier, tradingClass parameter in exerciseOptions.")
+		return
+	}
+
+	v := 2
+	fields := make([]interface{}, 0)
+
+	fields = append(fields, EXERCISE_OPTIONS, v, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields := append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields := append(fields, contract.TradingClass)
+	}
+
+	fields = append(fields,
+		exerciseAction,
+		exerciseQuantity,
+		account,
+		override)
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+
+}
+
+/*
+   #########################################################################
+   ################## Orders
+   ########################################################################
+*/
+
+/*PlaceOrder
+Call this function to place an order. The order status will
+        be returned by the orderStatus event.
+
+        orderId:OrderId - The order id. You must specify a unique value. When the
+            order START_APItus returns, it will be identified by this tag.
+            This tag is also used when canceling the order.
+        contract:Contract - This structure contains a description of the
+            contract which is being traded.
+        order:Order - This structure contains the details of tradedhe order.
+            Note: Each client MUST connect with a unique clientId.
+*/
+func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) {
+	switch v := ic.serverVersion; {
+	case v < MIN_SERVER_VER_DELTA_NEUTRAL && contract.DeltaNeutralContract != nil:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
+		return
+	case v < MIN_SERVER_VER_SCALE_ORDERS2 && order.ScaleSubsLevelSize != UNSETINT:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support Subsequent Level Size for Scale orders.")
+		return
+	case v < MIN_SERVER_VER_ALGO_ORDERS && order.AlgoStrategy != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algo orders.")
+		return
+	case v < MIN_SERVER_VER_NOT_HELD && order.NotHeld:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support notHeld parameter.")
+		return
+	case v < MIN_SERVER_VER_SEC_ID_TYPE && (contract.SecurityType != "" || contract.SecurityID != ""):
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
+		return
+	case v < MIN_SERVER_VER_PLACE_ORDER_CONID && contract.ContractID != UNSETINT && contract.ContractID > 0:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
+		return
+	case v < MIN_SERVER_VER_SSHORTX && order.ExemptCode != -1:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
+		return
+	case v < MIN_SERVER_VER_SSHORTX:
+		for _, comboLeg := range contract.ComboLegs {
+			if comboLeg.ExemptCode != -1 {
+				ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
+				return
+			}
+		}
+		fallthrough
+	case v < MIN_SERVER_VER_HEDGE_ORDERS && order.HedgeType != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support hedge orders.")
+		return
+	case v < MIN_SERVER_VER_OPT_OUT_SMART_ROUTING && order.OptOutSmartRouting:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support optOutSmartRouting parameter.")
+		return
+	case v < MIN_SERVER_VER_DELTA_NEUTRAL_CONID:
+		if order.DeltaNeutralContractID > 0 || order.DeltaNeutralSettlingFirm != "" || order.DeltaNeutralClearingAccount != "" || order.DeltaNeutralClearingIntent != "" {
+			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: ConId, SettlingFirm, ClearingAccount, ClearingIntent.")
+			return
+		}
+		fallthrough
+	case v < MIN_SERVER_VER_DELTA_NEUTRAL_OPEN_CLOSE:
+		if order.DeltaNeutralOpenClose != "" ||
+			order.DeltaNeutralShortSale ||
+			order.DeltaNeutralShortSaleSlot > 0 ||
+			order.DeltaNeutralDesignatedLocation != "" {
+			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: OpenClose, ShortSale, ShortSaleSlot, DesignatedLocation.")
+			return
+		}
+		fallthrough
+	case v < MIN_SERVER_VER_SCALE_ORDERS3:
+		if (order.ScalePriceIncrement > 0 && order.ScalePriceIncrement != UNSETFLOAT) &&
+			(order.ScalePriceAdjustValue != UNSETFLOAT ||
+				order.ScalePriceAdjustInterval != UNSETINT ||
+				order.ScaleProfitOffset != UNSETFLOAT ||
+				order.ScaleAutoReset ||
+				order.ScaleInitPosition != UNSETINT ||
+				order.ScaleInitFillQty != UNSETINT ||
+				order.ScaleRandomPercent) {
+			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+
+				"  It does not support Scale order parameters: PriceAdjustValue, PriceAdjustInterval, "+
+				"ProfitOffset, AutoReset, InitPosition, InitFillQty and RandomPercent.")
+			return
+		}
+		fallthrough
+	case v < MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE && contract.SecurityType == "BAG":
+		for _, orderComboLeg := range order.OrderComboLegs {
+			if orderComboLeg.Price != UNSETFLOAT {
+				ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support per-leg prices for order combo legs.")
+				return
+			}
+
+		}
+		fallthrough
+	case v < MIN_SERVER_VER_TRAILING_PERCENT && order.TrailingPercent != UNSETFLOAT:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support trailing percent parameter.")
+		return
+	case v < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in placeOrder.")
+		return
+	case v < MIN_SERVER_VER_SCALE_TABLE &&
+		(order.ScaleTable != "" ||
+			order.ActiveStartTime != "" ||
+			order.ActiveStopTime != ""):
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support scaleTable, activeStartTime and activeStopTime parameters.")
+		return
+	case v < MIN_SERVER_VER_ALGO_ID && order.AlgoID != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algoId parameter.")
+		return
+	case v < MIN_SERVER_VER_ORDER_SOLICITED && order.Solictied:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support order solicited parameter.")
+		return
+	case v < MIN_SERVER_VER_MODELS_SUPPORT && order.ModelCode != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support model code parameter.")
+		return
+	case v < MIN_SERVER_VER_EXT_OPERATOR && order.ExtOperator != "":
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support ext operator parameter")
+		return
+	case v < MIN_SERVER_VER_SOFT_DOLLAR_TIER &&
+		(order.SoftDollarTier.Name != "" || order.SoftDollarTier.Value != ""):
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support soft dollar tier")
+		return
+	case v < MIN_SERVER_VER_CASH_QTY && order.CashQty != UNSETFLOAT:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support cash quantity parameter")
+		return
+	case v < MIN_SERVER_VER_DECISION_MAKER &&
+		(order.Mifid2DecisionMaker != "" || order.Mifid2DecisionAlgo != ""):
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II decision maker parameters")
+		return
+	case v < MIN_SERVER_VER_MIFID_EXECUTION &&
+		(order.Mifid2ExecutionTrader != "" || order.Mifid2ExecutionAlgo != ""):
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II execution parameters")
+		return
+	case v < MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE && order.DontUseAutoPriceForHedge:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support dontUseAutoPriceForHedge parameter")
+		return
+	case v < MIN_SERVER_VER_ORDER_CONTAINER && order.IsOmsContainer:
+		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support oms container parameter")
+		return
+	}
+
+	var v int
+	if ic.serverVersion < MIN_SERVER_VER_NOT_HELD {
+		v = 27
+	} else {
+		v = 45
+	}
+
+	fields := make([]interface{}, 0)
+	fields = append(fields, PLACE_ORDER)
+
+	if ic.serverTime < MIN_SERVER_VER_ORDER_CONTAINER{
+		fields = append(fields, v)
+	}
+
+	fields = append(fields, orderID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_PLACE_ORDER_CONID{
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.SecurityID
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol)
+	
+	if ic.serverTime >= MIN_SERVER_VER_TRADING_CLASS{
+		fields = append(fields, contract.TradingClass)
+	}
+
+	if ic.serverTime >= MIN_SERVER_VER_SEC_ID_TYPE{
+		fields = append(fields, contract.SecurityIDType, contract.SecurityID)
+	}
+
+	fields = append(fields, order.Action)
+
+	if ic.serverVersion >= MIN_SERVER_VER_FRACTIONAL_POSITIONS{
+		fields = append(fields, order.TotalQuantity)
+	}else{
+		fields = append(fields, int64(order.TotalQuantity))
+	}
+
+	fields = append(fields, order.OrderType)
+
+	if ic.serverVersion < MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE{
+		if order.LimitPrice != UNSETFLOAT{
+			fields = append(fields, order.LimitPrice)
+		}else{
+			fields = append(fields, float64(0))
+		}
+	}else{
+		fields = append(fields, "")
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TRAILING_PERCENT{
+		if order.AuxPrice != UNSETFLOAT{
+			fields = append(fields, order.AuxPrice)
+		}else{
+			fields = append(fields, float64(0))
+		}
+	}else{
+		fields = append(fields, "")
+	}
+
+	fields = append(fields,
+		order.TIF,
+		order.OCAGroup,
+		order.Account,
+		order.OpenClose,
+		order.Origin,
+		order.OrderRef,
+		order.Transmit,
+		order.ParentID,
+		order.BlockOrder,
+		order.SweepToFill,
+		order.DisplaySize,
+		order.TriggerMethod,
+		order.OutsideRTH,
+		order.Hidden)
+
+	if contract.SecurityType == "BAG"{
+		comboLegsCount := len(contract.ComboLegs)
+		fields = append(fields, comboLegsCount)
+		for _, comboLeg := range(contract.ComboLegs){
+			fields = append(fields,
+				comboLeg.ContractID,
+				comboLeg.Ratio,
+				comboLeg.Action,
+				comboLeg.Exchange,
+				comboLeg.OpenClose,
+				comboLeg.ShortSaleSlot,
+				comboLeg.DesignatedLocation)
+			if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD{
+				fields = append(fields, comboLeg.ExemptCode)
+			}
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE && contract.SecurityType == "BAG" {
+		orderComboLegsCount := len(order.OrderComboLegs)
+		fields = append(fields, orderComboLegsCount)
+		for _, orderComboLeg := range(order.OrderComboLegs){
+			if orderComboLeg.Price != 0{
+				fields = append(fields, orderComboLeg.Price)
+			}else{
+				fields = append(fields, "")
+			}	
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_SMART_COMBO_ROUTING_PARAMS && contract.SecurityType == "BAG" {
+		smartComboRoutingParamsCount := len(order.SmartComboRoutingParams)
+		fields = append(fields, smartComboRoutingParamsCount)
+		for _, tv := range(order.SmartComboRoutingParams){
+			fields = append(fields, tv.Tag, tv.Value)
+		}
+	}
+
+}
+
 //ReqCurrentTime Asks the current system time on the server side.
 func (ic *IbClient) ReqCurrentTime() {
 	v := 1

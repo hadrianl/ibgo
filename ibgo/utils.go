@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math"
 	"strconv"
@@ -11,9 +12,10 @@ import (
 )
 
 const (
-	fieldSplit byte    = '\x00'
-	UNSETFLOAT float64 = math.MaxFloat64
-	UNSETINT   int64   = math.MaxInt64
+	fieldSplit  byte    = '\x00'
+	UNSETFLOAT  float64 = math.MaxFloat64
+	UNSETINT    int64   = math.MaxInt64
+	NO_VALID_ID int64   = -1
 )
 
 // // bytesToInt used to convert the first 4 byte into the message size
@@ -91,6 +93,8 @@ func field2Buf(msg interface{}) []byte {
 		b = encodeString(msg.(string))
 	case bool:
 		b = encodeBool(msg.(bool))
+	case TagValue:
+		b = encodeTagValue(msg.(TagValue))
 
 	case time.Time:
 		b = encodeTime(msg.(time.Time))
@@ -240,6 +244,10 @@ func encodeBool(b bool) []byte {
 	}
 	return []byte{'0'}
 
+}
+
+func encodeTagValue(tv TagValue) []byte {
+	return []byte(fmt.Sprintf("%v=%v;", tv.Tag, tv.Value))
 }
 
 func encodeTime(t time.Time) []byte {
