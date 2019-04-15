@@ -758,7 +758,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 
 	fields = append(fields,
 		contract.Symbol,
-		contract.SecurityID
+		contract.SecurityID,
 		contract.Expiry,
 		contract.Strike,
 		contract.Right,
@@ -793,14 +793,14 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 			fields = append(fields, float64(0))
 		}
 	}else{
-		fields = append(fields, "")
+		fields = append(fields, handleEmpty(order.LimitPrice))
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TRAILING_PERCENT{
 		if order.AuxPrice != UNSETFLOAT{
 			fields = append(fields, order.AuxPrice)
 		}else{
-			fields = append(fields, float64(0))
+			fields = append(fields, handleEmpty(order.AuxPrice))
 		}
 	}else{
 		fields = append(fields, "")
@@ -844,11 +844,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		orderComboLegsCount := len(order.OrderComboLegs)
 		fields = append(fields, orderComboLegsCount)
 		for _, orderComboLeg := range(order.OrderComboLegs){
-			if orderComboLeg.Price != 0{
-				fields = append(fields, orderComboLeg.Price)
-			}else{
-				fields = append(fields, "")
-			}	
+			fields = append(fields, handleEmpty(orderComboLeg.Price))
 		}
 	}
 
@@ -859,6 +855,55 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 			fields = append(fields, tv.Tag, tv.Value)
 		}
 	}
+
+	fields = append(fields,
+		"",
+		order.DiscretionaryAmount,
+		order.GoodAfterTime,
+		order.GoodTillDate,
+
+		order.FAGroup,
+		order.FAMethod,
+		order.FAPercentage,
+		order.FAProfile)
+
+	if ic.serverVersion >= MIN_SERVER_VER_MODELS_SUPPORT{
+		fields = append(fields, order.ModelCode)
+	}
+
+	fields = append(fields,
+		order.ShortSaleSlot,
+		order.DesignatedLocation)
+
+	//institutional short saleslot data (srv v18 and above)
+	if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD{
+		fields = append(fields, order.ExemptCode)
+	}
+
+	fields = append(fields, order.OCAType)
+
+	fields = append(fields,
+		order.Rule80A,
+		order.SettlingFirm,
+		order.AllOrNone,
+		handleEmpty(order.MinQty),
+		handleEmpty(order),
+		order.ETradeOnly,
+		order.FirmQuoteOnly,
+		handleEmpty(order.NBBOPriceCap),
+		order.AuctionStrategy,
+		handleEmpty(order.StartingPrice),
+		handleEmpty(order.StockRefPrice),
+		handleEmpty(order.Delta),
+		handleEmpty(order.StockRangeLower),
+		handleEmpty(order.StockRangeUpper),
+
+		order.OverridePercentageConstraints,
+
+		handleEmpty(order.Volatility),
+		handleEmpty(order.VolatilityType),
+		order.DeltaNeutralOrderType,
+		handleEmpty(order.DeltaNeutralAuxPrice))
 
 }
 
