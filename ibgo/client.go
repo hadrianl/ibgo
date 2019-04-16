@@ -465,11 +465,16 @@ func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, 
 	fields = append(fields, optionPrice, underPrice)
 
 	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var implVolOptBuffer bytes.Buffer
 		tagValuesCount := len(impVolOptions)
 		fields = append(fields, tagValuesCount)
 		for _, tv := range impVolOptions {
-			fields = append(fields, tv)
+			implVolOptBuffer.WriteString(tv.Tag)
+			implVolOptBuffer.WriteString("=")
+			implVolOptBuffer.WriteString(tv.Value)
+			implVolOptBuffer.WriteString(";")
 		}
+		fields = append(fields, implVolOptBuffer.Bytes())
 	}
 
 	msg := makeMsgBuf(fields...)
@@ -514,11 +519,17 @@ func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volati
 	fields = append(fields, volatility, underPrice)
 
 	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var optPrcOptBuffer bytes.Buffer
 		tagValuesCount := len(impVolOptions)
 		fields = append(fields, tagValuesCount)
 		for _, tv := range impVolOptions {
-			fields = append(fields, tv)
+			optPrcOptBuffer.WriteString(tv.Tag)
+			optPrcOptBuffer.WriteString("=")
+			optPrcOptBuffer.WriteString(tv.Value)
+			optPrcOptBuffer.WriteString(";")
 		}
+
+		fields = append(fields, optPrcOptBuffer.Bytes())
 	}
 
 	msg := makeMsgBuf(fields...)
@@ -746,13 +757,13 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	fields := make([]interface{}, 0)
 	fields = append(fields, PLACE_ORDER)
 
-	if ic.serverTime < MIN_SERVER_VER_ORDER_CONTAINER{
+	if ic.serverTime < MIN_SERVER_VER_ORDER_CONTAINER {
 		fields = append(fields, v)
 	}
 
 	fields = append(fields, orderID)
 
-	if ic.serverVersion >= MIN_SERVER_VER_PLACE_ORDER_CONID{
+	if ic.serverVersion >= MIN_SERVER_VER_PLACE_ORDER_CONID {
 		fields = append(fields, contract.ContractID)
 	}
 
@@ -767,42 +778,42 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		contract.PrimaryExchange,
 		contract.Currency,
 		contract.LocalSymbol)
-	
-	if ic.serverTime >= MIN_SERVER_VER_TRADING_CLASS{
+
+	if ic.serverTime >= MIN_SERVER_VER_TRADING_CLASS {
 		fields = append(fields, contract.TradingClass)
 	}
 
-	if ic.serverTime >= MIN_SERVER_VER_SEC_ID_TYPE{
+	if ic.serverTime >= MIN_SERVER_VER_SEC_ID_TYPE {
 		fields = append(fields, contract.SecurityIDType, contract.SecurityID)
 	}
 
 	fields = append(fields, order.Action)
 
-	if ic.serverVersion >= MIN_SERVER_VER_FRACTIONAL_POSITIONS{
+	if ic.serverVersion >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
 		fields = append(fields, order.TotalQuantity)
-	}else{
+	} else {
 		fields = append(fields, int64(order.TotalQuantity))
 	}
 
 	fields = append(fields, order.OrderType)
 
-	if ic.serverVersion < MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE{
-		if order.LimitPrice != UNSETFLOAT{
+	if ic.serverVersion < MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE {
+		if order.LimitPrice != UNSETFLOAT {
 			fields = append(fields, order.LimitPrice)
-		}else{
+		} else {
 			fields = append(fields, float64(0))
 		}
-	}else{
+	} else {
 		fields = append(fields, handleEmpty(order.LimitPrice))
 	}
 
-	if ic.serverVersion < MIN_SERVER_VER_TRAILING_PERCENT{
-		if order.AuxPrice != UNSETFLOAT{
+	if ic.serverVersion < MIN_SERVER_VER_TRAILING_PERCENT {
+		if order.AuxPrice != UNSETFLOAT {
 			fields = append(fields, order.AuxPrice)
-		}else{
+		} else {
 			fields = append(fields, handleEmpty(order.AuxPrice))
 		}
-	}else{
+	} else {
 		fields = append(fields, "")
 	}
 
@@ -822,10 +833,10 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		order.OutsideRTH,
 		order.Hidden)
 
-	if contract.SecurityType == "BAG"{
+	if contract.SecurityType == "BAG" {
 		comboLegsCount := len(contract.ComboLegs)
 		fields = append(fields, comboLegsCount)
-		for _, comboLeg := range(contract.ComboLegs){
+		for _, comboLeg := range contract.ComboLegs {
 			fields = append(fields,
 				comboLeg.ContractID,
 				comboLeg.Ratio,
@@ -834,7 +845,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 				comboLeg.OpenClose,
 				comboLeg.ShortSaleSlot,
 				comboLeg.DesignatedLocation)
-			if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD{
+			if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD {
 				fields = append(fields, comboLeg.ExemptCode)
 			}
 		}
@@ -843,7 +854,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	if ic.serverVersion >= MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE && contract.SecurityType == "BAG" {
 		orderComboLegsCount := len(order.OrderComboLegs)
 		fields = append(fields, orderComboLegsCount)
-		for _, orderComboLeg := range(order.OrderComboLegs){
+		for _, orderComboLeg := range order.OrderComboLegs {
 			fields = append(fields, handleEmpty(orderComboLeg.Price))
 		}
 	}
@@ -851,7 +862,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	if ic.serverVersion >= MIN_SERVER_VER_SMART_COMBO_ROUTING_PARAMS && contract.SecurityType == "BAG" {
 		smartComboRoutingParamsCount := len(order.SmartComboRoutingParams)
 		fields = append(fields, smartComboRoutingParamsCount)
-		for _, tv := range(order.SmartComboRoutingParams){
+		for _, tv := range order.SmartComboRoutingParams {
 			fields = append(fields, tv.Tag, tv.Value)
 		}
 	}
@@ -867,7 +878,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		order.FAPercentage,
 		order.FAProfile)
 
-	if ic.serverVersion >= MIN_SERVER_VER_MODELS_SUPPORT{
+	if ic.serverVersion >= MIN_SERVER_VER_MODELS_SUPPORT {
 		fields = append(fields, order.ModelCode)
 	}
 
@@ -876,7 +887,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		order.DesignatedLocation)
 
 	//institutional short saleslot data (srv v18 and above)
-	if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD{
+	if ic.serverVersion >= MIN_SERVER_VER_SSHORTX_OLD {
 		fields = append(fields, order.ExemptCode)
 	}
 
@@ -905,13 +916,214 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		order.DeltaNeutralOrderType,
 		handleEmpty(order.DeltaNeutralAuxPrice))
 
+	if ic.serverVersion >= MIN_SERVER_VER_DELTA_NEUTRAL_CONID && order.DeltaNeutralOrderType != "" {
+		fields = append(fields,
+			order.DeltaNeutralContractID,
+			order.DeltaNeutralSettlingFirm,
+			order.DeltaNeutralClearingAccount,
+			order.DeltaNeutralClearingIntent)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_DELTA_NEUTRAL_OPEN_CLOSE && order.DeltaNeutralOrderType != "" {
+		fields = append(fields,
+			order.DeltaNeutralOpenClose,
+			order.DeltaNeutralShortSale,
+			order.DeltaNeutralShortSaleSlot,
+			order.DeltaNeutralDesignatedLocation)
+	}
+
+	fields = append(fields,
+		order.ContinuousUpdate,
+		handleEmpty(order.ReferencePriceType),
+		handleEmpty(order.TrailStopPrice))
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRAILING_PERCENT {
+		fields = append(fields, handleEmpty(order.TrailingPercent))
+	}
+
+	//scale orders
+	if ic.serverVersion >= MIN_SERVER_VER_SCALE_ORDERS2 {
+		fields = append(fields,
+			handleEmpty(order.ScaleInitLevelSize),
+			handleEmpty(order.ScaleSubsLevelSize))
+	} else {
+		fields = append(fields,
+			"",
+			handleEmpty(order.ScaleInitLevelSize))
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_SCALE_ORDERS3 && order.ScalePriceIncrement != UNSETFLOAT && order.ScalePriceIncrement > 0.0 {
+		fields = append(fields,
+			handleEmpty(order.ScalePriceAdjustValue),
+			handleEmpty(order.ScalePriceAdjustInterval),
+			handleEmpty(order.ScaleProfitOffset),
+			order.ScaleAutoReset,
+			handleEmpty(order.ScaleInitPosition),
+			handleEmpty(order.ScaleInitFillQty),
+			order.ScaleRandomPercent)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_SCALE_TABLE {
+		fields = append(fields,
+			order.ScaleTable,
+			order.ActiveStartTime,
+			order.ActiveStopTime)
+	}
+
+	//hedge orders
+	if ic.serverVersion >= MIN_SERVER_VER_HEDGE_ORDERS {
+		fields = append(fields, order.HedgeType)
+		if order.HedgeType != "" {
+			fields = append(fields, order.HedgeParam)
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_OPT_OUT_SMART_ROUTING {
+		fields = append(fields, order.HedgeType)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_PTA_ORDERS {
+		fields = append(fields,
+			order.ClearingAccount,
+			order.ClearingIntent)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_NOT_HELD {
+		fields = append(fields, order.NotHeld)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_DELTA_NEUTRAL {
+		if contract.DeltaNeutralContract != nil {
+			fields = append(fields,
+				true,
+				contract.DeltaNeutralContract.ContractID,
+				contract.DeltaNeutralContract.Delta,
+				contract.DeltaNeutralContract.Price)
+		} else {
+			fields = append(fields, false)
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_ALGO_ORDERS {
+		fields = append(fields, order.AlgoStrategy)
+
+		if order.AlgoStrategy != "" {
+			algoParamsCount := len(order.AlgoParams)
+			fields = append(fields, algoParamsCount)
+			for _, tv := range order.AlgoParams {
+				fields = append(fields, tv.Tag, tv.Value)
+			}
+		}
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_ALGO_ID {
+		fields = append(fields, order.AlgoID)
+	}
+
+	fields = append(fields, order.WhatIf)
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var miscOptionsBuffer bytes.Buffer
+		for _, tv := range order.OrderMiscOptions {
+			miscOptionsBuffer.WriteString(tv.Tag)
+			miscOptionsBuffer.WriteString("=")
+			miscOptionsBuffer.WriteString(tv.Value)
+			miscOptionsBuffer.WriteString(";")
+		}
+
+		fields = append(fields, miscOptionsBuffer.Bytes())
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_ORDER_SOLICITED {
+		fields = append(fields, order.Solictied)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_RANDOMIZE_SIZE_AND_PRICE {
+		fields = append(fields,
+			order.RandomizeSize,
+			order.RandomizePrice)
+	}
+
+	if ic.serverTime >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
+		if order.OrderType == "PEG BENCH" {
+			fields = append(fields,
+				order.ReferenceContractID,
+				order.IsPeggedChangeAmountDecrease,
+				order.PeggedChangeAmount,
+				order.ReferenceChangeAmount,
+				order.ReferenceExchangeID)
+		}
+
+		orderConditionsCount := len(order.Conditions)
+		fields = append(fields, orderConditionsCount)
+		for _, cond := range order.Conditions {
+			fields = append(fields,
+				cond.CondType,
+				cond.toFields()...)
+		}
+		if orderConditionsCount > 0 {
+			fields = append(fields,
+				order.ConditionsIgnoreRth,
+				order.ConditionsCancelOrder)
+		}
+
+		fields = append(fields,
+			order.AdjustedOrderType,
+			order.TriggerPrice,
+			order.LimitPrice,
+			order.AdjustedStopPrice,
+			order.AdjustedStopLimitPrice,
+			order.AdjustedTrailingAmount,
+			order.AdjustableTrailingUnit)
+
+		if ic.serverVersion >= MIN_SERVER_VER_EXT_OPERATOR {
+			fields = append(fields, order.ExtOperator)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_SOFT_DOLLAR_TIER {
+			fields = append(fields, order.SoftDollarTier.Name, order.SoftDollarTier.Value)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_CASH_QTY {
+			fields = append(fields, order.CashQty)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_DECISION_MAKER {
+			fields = append(fields, order.Mifid2DecisionMaker, order.Mifid2DecisionAlgo)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_MIFID_EXECUTION {
+			fields = append(fields, order.Mifid2ExecutionTrader, order.Mifid2ExecutionAlgo)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE {
+			fields = append(fields, order.DontUseAutoPriceForHedge)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_ORDER_CONTAINER {
+			fields = append(fields, order.IsOmsContainer)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_D_PEG_ORDERS {
+			fields = append(fields, order.DiscretionaryUpToLimitPrice)
+		}
+
+		msg := makeMsgBuf(fields...)
+
+		ic.reqChan <- msg
+	}
+
 }
 
-//ReqCurrentTime Asks the current system time on the server side.
-func (ic *IbClient) ReqCurrentTime() {
+func (ic *IbClient) CancelOrder(orderID int64) {
 	v := 1
-	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
+	msg := makeMsgBuf(CANCEL_ORDER, v, orderID)
+	ic.reqChan <- msg
+}
 
+func (ic *IbClient) ReqOpenOrders() {
+	v := 1
+	msg := makeMsgBuf(REQ_OPEN_ORDERS, v)
 	ic.reqChan <- msg
 }
 
@@ -923,12 +1135,173 @@ func (ic *IbClient) ReqAutoOpenOrders(autoBind bool) {
 	ic.reqChan <- msg
 }
 
+func (ic *IbClient) ReqAllOpenOrders() {
+	v := 1
+	msg := makeMsgBuf(REQ_ALL_OPEN_ORDERS, v)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqGlobalCancel() {
+	v := 1
+	msg := makeMsgBuf(REQ_GLOBAL_CANCEL, v)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqIDs(numIDs int) {
+	v := 1
+	msg := makeMsgBuf(REQ_IDS, v, numIDs)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Account and Portfolio
+   ########################################################################
+*/
+
 func (ic *IbClient) ReqAccountUpdates(subscribe bool, accName string) {
 	v := 2
 	msg := makeMsgBuf(REQ_ACCT_DATA, v, subscribe, accName)
 
 	ic.reqChan <- msg
+}
 
+/*ReqAccountSummary
+Call this method to request and keep up to date the data that appears
+        on the TWS Account Window Summary tab. The data is returned by
+        accountSummary().
+
+        Note:   This request is designed for an FA managed account but can be
+        used for any multi-account structure.
+
+        reqId:int - The ID of the data request. Ensures that responses are matched
+            to requests If several requests are in process.
+        groupName:str - Set to All to returnrn account summary data for all
+            accounts, or set to a specific Advisor Account Group name that has
+            already been created in TWS Global Configuration.
+        tags:str - A comma-separated list of account tags.  Available tags are:
+            accountountType
+            NetLiquidation,
+            TotalCashValue - Total cash including futures pnl
+            SettledCash - For cash accounts, this is the same as
+            TotalCashValue
+            AccruedCash - Net accrued interest
+            BuyingPower - The maximum amount of marginable US stocks the
+                account can buy
+            EquityWithLoanValue - Cash + stocks + bonds + mutual funds
+            PreviousDayEquityWithLoanValue,
+            GrossPositionValue - The sum of the absolute value of all stock
+                and equity option positions
+            RegTEquity,
+            RegTMargin,
+            SMA - Special Memorandum Account
+            InitMarginReq,
+            MaintMarginReq,
+            AvailableFunds,
+            ExcessLiquidity,
+            Cushion - Excess liquidity as a percentage of net liquidation value
+            FullInitMarginReq,
+            FullMaintMarginReq,
+            FullAvailableFunds,
+            FullExcessLiquidity,
+            LookAheadNextChange - Time when look-ahead values take effect
+            LookAheadInitMarginReq,
+            LookAheadMaintMarginReq,
+            LookAheadAvailableFunds,
+            LookAheadExcessLiquidity,
+            HighestSeverity - A measure of how close the account is to liquidation
+            DayTradesRemaining - The Number of Open/Close trades a user
+                could put on before Pattern Day Trading is detected. A value of "-1"
+                means that the user can put on unlimited day trades.
+            Leverage - GrossPositionValue / NetLiquidation
+            $LEDGER - Single flag to relay all cash balance tags*, only in base
+                currency.
+            $LEDGER:CURRENCY - Single flag to relay all cash balance tags*, only in
+                the specified currency.
+            $LEDGER:ALL - Single flag to relay all cash balance tags* in all
+            currencies.
+*/
+func (ic *IbClient) ReqAccountSummary(reqID int64, groupName string, tags string) {
+	v := 1
+	msg := makeMsgBuf(REQ_ACCOUNT_SUMMARY, v, reqID, groupName, tags)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelAccountSummary(reqID int64) {
+	v := 1
+	msg := makeMsgBuf(CANCEL_ACCOUNT_SUMMARY, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqPositions() {
+	if ic.serverVersion < MIN_SERVER_VER_POSITIONS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
+		return
+	}
+	v := 1
+	msg := makeMsgBuf(REQ_POSITIONS, v)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelPositions() {
+	if ic.serverVersion < MIN_SERVER_VER_POSITIONS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(CANCEL_POSITIONS, v)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqPositionsMulti(reqID int64, account string, modelCode string) {
+	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions multi request.")
+		return
+	}
+	v := 1
+	msg := makeMsgBuf(REQ_POSITIONS_MULTI, v, reqID, account, modelCode)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelPositionsMulti(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel positions multi request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(CANCEL_POSITIONS_MULTI, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqAccountUpdatesMulti(reqID int64, account string, modelCode string, ledgerAndNLV bool) {
+	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support account updates multi request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(REQ_ACCOUNT_UPDATES_MULTI, v, reqID, account, modelCode, ledgerAndNLV)
+
+	ic.reqChan <- msg
+}
+
+//ReqCurrentTime Asks the current system time on the server side.
+func (ic *IbClient) ReqCurrentTime() {
+	v := 1
+	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
+
+	ic.reqChan <- msg
 }
 
 func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {

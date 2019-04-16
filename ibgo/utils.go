@@ -89,14 +89,12 @@ func field2Buf(msg interface{}) []byte {
 		b = encodeInt64(int64(msg.(OUT))) // maybe there is a better solution
 	case float64:
 		b = encodeFloat(msg.(float64))
-
 	case string:
 		b = encodeString(msg.(string))
 	case bool:
 		b = encodeBool(msg.(bool))
-	case TagValue:
-		b = encodeTagValue(msg.(TagValue))
-
+	case []byte:
+		b = msg.([]byte)
 	case time.Time:
 		b = encodeTime(msg.(time.Time))
 

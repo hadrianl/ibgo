@@ -11,6 +11,7 @@ import (
 
 type OrderConditioner interface {
 	decode(fields [][]byte)
+	toFields() []interface{}
 }
 
 type OrderCondition struct {
@@ -30,6 +31,13 @@ func (oc OrderCondition) decode(fields [][]byte) {
 	oc.IsConjunctionConnection = connector == "a"
 }
 
+func (oc OrderCondition) toFields() []interface{} {
+	if oc.IsConjunctionConnection {
+		return []interface{"a"}
+	}
+	return []interface{"o"}
+}
+
 type ExecutionCondition struct {
 	OrderCondition
 	SecType  string
@@ -44,6 +52,10 @@ func (ec ExecutionCondition) decode(fields [][]byte) { // 4 fields
 	ec.Symbol = decodeString(fields[3])
 }
 
+func (ec ExecutionCondition) toFields() []interface{} {
+	return []interface{ec.OrderCondition.toFields()..., ec.SecType, ec.Exchange, ec.Symbol}
+}
+
 type OperatorCondition struct {
 	OrderCondition
 	IsMore bool
@@ -54,6 +66,11 @@ func (oc OperatorCondition) decode(fields [][]byte) { // 2 fields
 	oc.IsMore = decodeBool(fields[1])
 }
 
+func (oc OperatorCondition) toFields() []interface{} {
+	return []interface{ec.OrderCondition.toFields()..., oc.IsMore}
+}
+
+
 type MarginCondition struct {
 	OperatorCondition
 	Percent float64
@@ -62,6 +79,10 @@ type MarginCondition struct {
 func (mc MarginCondition) decode(fields [][]byte) { // 3 fields
 	mc.OperatorCondition.decode(fields[0:2])
 	mc.Percent = decodeFloat(fields[2])
+}
+
+func (mc MarginCondition) toFields() []interface{} {
+	return []interface{ec.OperatorCondition.toFields()...,  mc.Percent}
 }
 
 type ContractCondition struct {
@@ -76,14 +97,23 @@ func (cc ContractCondition) decode(fields [][]byte) { // 4 fields
 	cc.Exchange = decodeString(fields[3])
 }
 
+func (cc ContractCondition) toFields() []interface{} {
+	return []interface{ec.OperatorCondition.toFields()..., cc.ConId, cc.Exchange}
+}
+
 type TimeCondition struct {
 	OperatorCondition
-	Time time.Time
+	Time string
 }
 
 func (tc TimeCondition) decode(fields [][]byte) { // 3 fields
 	tc.OperatorCondition.decode(fields[0:2])
-	tc.Time = decodeTime(fields[2], "20060102")
+	// tc.Time = decodeTime(fields[2], "20060102")
+	tc.Time = decodeString(fields[2])
+}
+
+func (tc TimeCondition) toFields() []interface{} {
+	return []interface{tc.OperatorCondition.toFields()..., tc.Time}
 }
 
 type PriceCondition struct {
@@ -98,6 +128,10 @@ func (pc PriceCondition) decode(fields [][]byte) { // 6 fields
 	pc.TriggerMethod = decodeInt(fields[5])
 }
 
+func (pc PriceCondition) toFields() []interface{} {
+	return []interface{pc.ContractCondition.toFields()..., pc.Price, pc.TriggerMethod}
+}
+
 type PercentChangeCondition struct {
 	ContractCondition
 	ChangePercent float64
@@ -108,6 +142,10 @@ func (pcc PercentChangeCondition) decode(fields [][]byte) { // 5 fields
 	pcc.ChangePercent = decodeFloat(fields[4])
 }
 
+func (pcc PercentChangeCondition) toFields() []interface{} {
+	return []interface{pcc.ContractCondition.toFields()..., pcc.ChangePercent}
+}
+
 type VolumeCondition struct {
 	ContractCondition
 	Volume int64
@@ -116,6 +154,10 @@ type VolumeCondition struct {
 func (vc VolumeCondition) decode(fields [][]byte) { // 5 fields
 	vc.ContractCondition.decode(fields[0:4])
 	vc.Volume = decodeInt(fields[4])
+}
+
+func (vc VolumeCondition) toFields() []interface{} {
+	return []interface{vc.ContractCondition.toFields()..., vc.Volume}
 }
 
 func InitOrderCondition(conType int64) (OrderConditioner, int) {
