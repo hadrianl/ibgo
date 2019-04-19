@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -290,7 +291,7 @@ func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList s
 	}
 
 	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
-		if mktDataOptions != nil {
+		if len(mktDataOptions) > 0 {
 			panic("not supported")
 		}
 		fields = append(fields, "")
@@ -1296,14 +1297,91 @@ func (ic *IbClient) ReqAccountUpdatesMulti(reqID int64, account string, modelCod
 	ic.reqChan <- msg
 }
 
-//ReqCurrentTime Asks the current system time on the server side.
-func (ic *IbClient) ReqCurrentTime() {
+func (ic *IbClient) CancelAccountUpdatesMulti(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel account updates multi request.")
+		return
+	}
+
 	v := 1
-	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
+	msg := makeMsgBuf(CANCEL_ACCOUNT_UPDATES_MULTI, v, reqID)
 
 	ic.reqChan <- msg
 }
 
+/*
+   #########################################################################
+   ################## Daily PnL
+   #########################################################################
+
+*/
+
+func (ic *IbClient) ReqPnL(reqID int64, account string, modelCode string) {
+	if ic.serverVersion < MIN_SERVER_VER_PNL {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_PNL, reqID, account, modelCode)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelPnL(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_PNL {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		return
+	}
+
+	msg := makeMsgBuf(CANCEL_PNL, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqPnLSingle(reqID int64, account string, modelCode string, contractID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_PNL {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_PNL_SINGLE, reqID, account, modelCode, contractID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelPnLSingle(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_PNL {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		return
+	}
+
+	msg := makeMsgBuf(CANCEL_PNL_SINGLE, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Executions
+   #########################################################################
+
+*/
+
+/*ReqExecutions
+When this function is called, the execution reports that meet the
+        filter criteria are downloaded to the client via the execDetails()
+        function. To view executions beyond the past 24 hours, open the
+        Trade Log in TWS and, while the Trade Log is displayed, request
+        the executions again from the API.
+
+        reqId:int - The ID of the data request. Ensures that responses are
+            matched to requests if several requests are in process.
+        execFilter:ExecutionFilter - This object contains attributes that
+            describe the filter criteria used to determine which execution
+            reports are returned.
+
+        NOTE: Time format must be 'yyyymmdd-hh:mm:ss' Eg: '20030702-14:55'
+*/
 func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	v := 3
 	fields := make([]interface{}, 0)
@@ -1326,6 +1404,331 @@ func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	ic.reqChan <- msg
 }
 
+/*
+   #########################################################################
+   ################## Contract Details
+   #########################################################################
+
+*/
+
+func (ic *IbClient) ReqContractDetails(reqID int64, contract *Contract) {
+	if ic.serverVersion < MIN_SERVER_VER_SEC_ID_TYPE &&
+		(contract.SecurityID != "" || contract.SecurityID != "") {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqContractDetails.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_LINKING && contract.PrimaryExchange != "" {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support primaryExchange parameter in reqContractDetails.")
+		return
+	}
+
+	v := 8
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_CONTRACT_DATA, v)
+
+	if ic.serverVersion >= MIN_SERVER_VER_CONTRACT_DATA_CHAIN {
+		fields = append(fields, reqID)
+	}
+
+	fields = append(fields,
+		contract.ContractID,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier)
+
+	if ic.serverVersion >= MIN_SERVER_VER_PRIMARYEXCH {
+		fields = append(fields, contract.Exchange, contract.PrimaryExchange)
+	} else if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		if contract.PrimaryExchange != "" && (contract.Exchange == "BEST" || contract.Exchange == "SMART") {
+			fields = append(fields, strings.Join([]string{contract.Exchange, contract.PrimaryExchange}, ":"))
+		} else {
+			fields = append(fields, contract.Exchange)
+		}
+	}
+
+	fields = append(fields, contract.Currency, contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass, contract.IncludeExpired)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_SEC_ID_TYPE {
+		fields = append(fields, contract.SecurityIDType, contract.SecurityID)
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Market Depth
+   #########################################################################
+*/
+
+func (ic *IbClient) ReqMktDepthExchanges() {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_MKT_DEPTH_EXCHANGES {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market depth exchanges request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_MKT_DEPTH_EXCHANGES)
+
+	ic.reqChan <- msg
+}
+
+/*reqMktDepth
+Call this function to request market depth for a specific
+        contract. The market depth will be returned by the updateMktDepth() and
+        updateMktDepthL2() events.
+
+        Requests the contract's market depth (order book). Note this request must be
+        direct-routed to an exchange and not smart-routed. The number of simultaneous
+        market depth requests allowed in an account is calculated based on a formula
+        that looks at an accounts equity, commissions, and quote booster packs.
+
+        reqId:TickerId - The ticker id. Must be a unique value. When the market
+            depth data returns, it will be identified by this tag. This is
+            also used when canceling the market depth
+        contract:Contact - This structure contains a description of the contract
+            for which market depth data is being requested.
+        numRows:int - Specifies the numRowsumber of market depth rows to display.
+        isSmartDepth:bool - specifies SMART depth request
+        mktDepthOptions:TagValueList - For internal use only. Use default value
+            XYZ.
+*/
+func (ic *IbClient) reqMktDepth(reqID int64, contract *Contract, numRows int, isSmartDepth bool, mktDepthOptions []TagValue) {
+
+	switch {
+	case ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS:
+		if contract.TradingClass != "" || contract.ContractID > 0 {
+			ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameters in reqMktDepth.")
+			return
+		}
+		fallthrough
+	case ic.serverVersion < MIN_SERVER_VER_SMART_DEPTH && isSmartDepth:
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support SMART depth request.")
+		return
+	case ic.serverVersion < MIN_SERVER_VER_MKT_DEPTH_PRIM_EXCHANGE && contract.PrimaryExchange != "":
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support primaryExchange parameter in reqMktDepth.")
+		return
+	}
+
+	v := 5
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_MKT_DEPTH, v, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange)
+
+	if ic.serverVersion >= MIN_SERVER_VER_MKT_DEPTH_PRIM_EXCHANGE {
+		fields = append(fields, contract.PrimaryExchange)
+	}
+
+	fields = append(fields,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+
+	fields = append(fields, numRows)
+
+	if ic.serverVersion >= MIN_SERVER_VER_SMART_DEPTH {
+		fields = append(fields, isSmartDepth)
+	}
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		//current doc says this part if for "internal use only" -> won't support it
+		if len(mktDepthOptions) > 0 {
+			panic("not supported")
+		}
+
+		fields = append(fields, "")
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelMktDepth(reqID int64, isSmartDepth bool) {
+	if ic.serverVersion < MIN_SERVER_VER_SMART_DEPTH && isSmartDepth {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support SMART depth cancel.")
+		return
+	}
+	v := 1
+	fields := make([]interface{}, 0)
+	fields = append(fields, CANCEL_MKT_DEPTH, v, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_SMART_DEPTH {
+		fields = append(fields, isSmartDepth)
+	}
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## News Bulletins
+   #########################################################################
+*/
+
+/*ReqNewsBulletins
+Call this function to start receiving news bulletins. Each bulletin
+        will be returned by the updateNewsBulletin() event.
+
+        allMsgs:bool - If set to TRUE, returns all the existing bulletins for
+        the currencyent day and any new ones. If set to FALSE, will only
+        return new bulletins. "
+*/
+func (ic *IbClient) ReqNewsBulletins(allMsgs bool) {
+	v := 1
+
+	msg := makeMsgBuf(REQ_NEWS_BULLETINS, v, allMsgs)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelNewsBulletins() {
+	v := 1
+
+	msg := makeMsgBuf(CANCEL_NEWS_BULLETINS, v)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Financial Advisors
+   #########################################################################
+*/
+
+/*ReqManagedAccts
+Call this function to request the list of managed accounts. The list
+        will be returned by the managedAccounts() function on the EWrapper.
+
+        Note:  This request can only be made when connected to a FA managed account.
+*/
+func (ic *IbClient) ReqManagedAccts() {
+	v := 1
+
+	msg := makeMsgBuf(REQ_MANAGED_ACCTS, v)
+
+	ic.reqChan <- msg
+}
+
+//RequestFA  faData :  0->"N/A", 1->"GROUPS", 2->"PROFILES", 3->"ALIASES"
+func (ic *IbClient) RequestFA(faData int) {
+	v := 1
+
+	msg := makeMsgBuf(REQ_FA, v, faData)
+
+	ic.reqChan <- msg
+}
+
+/*ReplaceFA
+Call this function to modify FA configuration information from the
+        API. Note that this can also be done manually in TWS itself.
+
+        faData:FaDataType - Specifies the type of Financial Advisor
+            configuration data beingingg requested. Valid values include:
+            1 = GROUPS
+            2 = PROFILE
+            3 = ACCOUNT ALIASES
+        cxml: str - The XML string containing the new FA configuration
+            information.
+*/
+func (ic *IbClient) ReplaceFA(faData int, cxml string) {
+	v := 1
+
+	msg := makeMsgBuf(REPLACE_FA, v, faData, cxml)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Historical Data
+   #########################################################################
+*/
+
+/*ReqHistoricalData
+Requests contracts' historical data. When requesting historical data, a
+        finishing time and date is required along with a duration string. The
+        resulting bars will be returned in EWrapper.historicalData()
+
+        reqId:TickerId - The id of the request. Must be a unique value. When the
+            market data returns, it whatToShowill be identified by this tag. This is also
+            used when canceling the market data.
+        contract:Contract - This object contains a description of the contract for which
+            market data is being requested.
+        endDateTime:str - Defines a query end date and time at any point during the past 6 mos.
+            Valid values include any date/time within the past six months in the format:
+            yyyymmdd HH:mm:ss ttt
+
+            where "ttt" is the optional time zone.
+        durationStr:str - Set the query duration up to one week, using a time unit
+            of seconds, days or weeks. Valid values include any integer followed by a space
+            and then S (seconds), D (days) or W (week). If no unit is specified, seconds is used.
+        barSizeSetting:str - Specifies the size of the bars that will be returned (within IB/TWS listimits).
+            Valid values include:
+            1 sec
+            5 secs
+            15 secs
+            30 secs
+            1 min
+            2 mins
+            3 mins
+            5 mins
+            15 mins
+            30 mins
+            1 hour
+            1 day
+        whatToShow:str - Determines the nature of data beinging extracted. Valid values include:
+
+            TRADES
+            MIDPOINT
+            BID
+            ASK
+            BID_ASK
+            HISTORICAL_VOLATILITY
+            OPTION_IMPLIED_VOLATILITY
+        useRTH:int - Determines whether to return all data available during the requested time span,
+            or only data that falls within regular trading hours. Valid values include:
+
+            0 - all data is returned even where the market in question was outside of its
+            regular trading hours.
+            1 - only data within the regular trading hours is returned, even if the
+            requested time span falls partially or completely outside of the RTH.
+        formatDate: int - Determines the date format applied to returned bars. validd values include:
+
+            1 - dates applying to bars returned in the format: yyyymmdd{space}{space}hh:mm:dd
+            2 - dates are returned as a long integer specifying the number of seconds since
+                1/1/1970 GMT.
+        chartOptions:TagValueList - For internal use only. Use default value XYZ.
+*/
 func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTime string, duration string, barSize string, whatToShow string, useRTH bool, formatDate int, keepUpToDate bool, chartOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
 		if contract.TradingClass != "" || contract.ContractID > 0 {
@@ -1399,6 +1802,322 @@ func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTim
 
 	msg := makeMsgBuf(fields...)
 	// fmt.Println(msg)
+
+	ic.reqChan <- msg
+}
+
+/*CancelHistoricalData
+Used if an internet disconnect has occurred or the results of a query
+        are otherwise delayed and the application is no longer interested in receiving
+        the data.
+
+        reqId:TickerId - The ticker ID. Must be a unique value.
+*/
+func (ic *IbClient) CancelHistoricalData(reqID int64) {
+	v := 1
+	msg := makeMsgBuf(CANCEL_HISTORICAL_DATA, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqHeadTimeStamp(reqID int64, contract *Contract, whatToShow string, useRTH bool, formatDate int) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_HEAD_TIMESTAMP {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
+		return
+	}
+
+	fields := make([]interface{}, 0)
+
+	fields = append(fields,
+		REQ_HEAD_TIMESTAMP,
+		reqID,
+		contract.ContractID,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.LocalSymbol,
+		contract.Currency,
+		contract.LocalSymbol,
+		contract.TradingClass,
+		contract.IncludeExpired,
+		useRTH,
+		whatToShow,
+		formatDate)
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelHeadTimeStamp(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_CANCEL_HEADTIMESTAMP {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
+		return
+	}
+
+	msg := makeMsgBuf(CANCEL_HEAD_TIMESTAMP, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqHistogramData(reqID int64, contract *Contract, useRTH bool, timePeriod string) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTOGRAM {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
+		return
+	}
+
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_HISTOGRAM_DATA,
+		reqID,
+		contract.ContractID,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol,
+		contract.TradingClass,
+		contract.IncludeExpired,
+		useRTH,
+		timePeriod)
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelHistogramData(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTOGRAM {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
+		return
+	}
+
+	msg := makeMsgBuf(CANCEL_HISTOGRAM_DATA, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqHistoricalTicks(reqID int64, contract *Contract, startDateTime string, endDateTime string, numberOfTicks int, whatToShow string, useRTH bool, ignoreSize bool, miscOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_HISTORICAL_TICKS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical ticks requests..")
+		return
+	}
+
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_HISTORICAL_TICKS,
+		reqID,
+		contract.ContractID,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol,
+		contract.TradingClass,
+		contract.IncludeExpired,
+		startDateTime,
+		endDateTime,
+		numberOfTicks,
+		whatToShow,
+		useRTH,
+		ignoreSize)
+
+	var miscOptionsBuffer bytes.Buffer
+	for _, tv := range miscOptions {
+		miscOptionsBuffer.WriteString(tv.Tag)
+		miscOptionsBuffer.WriteString("=")
+		miscOptionsBuffer.WriteString(tv.Value)
+		miscOptionsBuffer.WriteString(";")
+	}
+	fields = append(fields, miscOptionsBuffer.Bytes())
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+//ReqScannerParameters requests an XML string that describes all possible scanner queries.
+func (ic *IbClient) ReqScannerParameters() {
+	v := 1
+	msg := makeMsgBuf(REQ_SCANNER_PARAMETERS, v)
+
+	ic.reqChan <- msg
+}
+
+/*ReqScannerSubscription
+reqId:int - The ticker ID. Must be a unique value.
+        scannerSubscription:ScannerSubscription - This structure contains
+            possible parameters used to filter results.
+        scannerSubscriptionOptions:TagValueList - For internal use only.
+            Use default value XYZ.
+*/
+func (ic *IbClient) ReqScannerSubscription(reqID int64, subscription *ScannerSubscription, scannerSubscriptionOptions []TagValue, scannerSubscriptionFilterOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_SCANNER_GENERIC_OPTS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support API scanner subscription generic filter options")
+		return
+	}
+
+	v := 4
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_SCANNER_SUBSCRIPTION)
+
+	if ic.serverVersion < MIN_SERVER_VER_SCANNER_GENERIC_OPTS {
+		fields = append(fields, v)
+	}
+
+	fields = append(fields,
+		reqID,
+		handleEmpty(subscription.NumberOfRows),
+		subscription.Instrument,
+		subscription.LocationCode,
+		subscription.ScanCode,
+		handleEmpty(subscription.AbovePrice),
+		handleEmpty(subscription.BelowPrice),
+		handleEmpty(subscription.AboveVolume),
+		handleEmpty(subscription.MarketCapAbove),
+		handleEmpty(subscription.MarketCapBelow),
+		subscription.MoodyRatingAbove,
+		subscription.MoodyRatingBelow,
+		subscription.SpRatingAbove,
+		subscription.SpRatingBelow,
+		subscription.MaturityDateAbove,
+		subscription.MaturityDateBelow,
+		handleEmpty(subscription.CouponRateAbove),
+		handleEmpty(subscription.CouponRateBelow),
+		subscription.ExcludeConvertible,
+		handleEmpty(subscription.AverageOptionVolumeAbove),
+		subscription.ScannerSettingPairs,
+		subscription.StockTypeFilter)
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var scannerSubscriptionOptionsBuffer bytes.Buffer
+		for _, tv := range scannerSubscriptionOptions {
+			scannerSubscriptionOptionsBuffer.WriteString(tv.Tag)
+			scannerSubscriptionOptionsBuffer.WriteString("=")
+			scannerSubscriptionOptionsBuffer.WriteString(tv.Value)
+			scannerSubscriptionOptionsBuffer.WriteString(";")
+		}
+		fields = append(fields, scannerSubscriptionOptionsBuffer.Bytes())
+
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+//CancelScannerSubscription reqId:int - The ticker ID. Must be a unique value.
+func (ic *IbClient) CancelScannerSubscription(reqID int64) {
+	v := 1
+	msg := makeMsgBuf(CANCEL_SCANNER_SUBSCRIPTION, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Real Time Bars
+   #########################################################################
+
+*/
+
+/*ReqRealTimeBars
+Call the reqRealTimeBars() function to start receiving real time bar
+        results through the realtimeBar() EWrapper function.
+
+        reqId:TickerId - The Id for the request. Must be a unique value. When the
+            data is received, it will be identified by this Id. This is also
+            used when canceling the request.
+        contract:Contract - This object contains a description of the contract
+            for which real time bars are being requested
+        barSize:int - Currently only 5 second bars are supported, if any other
+            value is used, an exception will be thrown.
+        whatToShow:str - Determines the nature of the data extracted. Valid
+            values include:
+            TRADES
+            BID
+            ASK
+            MIDPOINT
+        useRTH:bool - Regular Trading Hours only. Valid values include:
+            0 = all data available during the time span requested is returned,
+                including time intervals when the market in question was
+                outside of regular trading hours.
+            1 = only data within the regular trading hours for the product
+                requested is returned, even if the time time span falls
+                partially or completely outside.
+        realTimeBarOptions:TagValueList - For internal use only. Use default value XYZ.
+*/
+func (ic *IbClient) ReqRealTimeBars(reqID int64, contract *Contract, barSize int, whatToShow string, useRTH bool, realTimeBarsOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
+		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameter in reqRealTimeBars.")
+		return
+	}
+
+	v := 3
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_REAL_TIME_BARS, v, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Expiry,
+		contract.Strike,
+		contract.Right,
+		contract.Multiplier,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.TradingClass)
+	}
+
+	fields = append(fields,
+		barSize,
+		whatToShow,
+		useRTH)
+
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var realTimeBarsOptionsBuffer bytes.Buffer
+		for _, tv := range realTimeBarsOptions {
+			realTimeBarsOptionsBuffer.WriteString(tv.Tag)
+			realTimeBarsOptionsBuffer.WriteString("=")
+			realTimeBarsOptionsBuffer.WriteString(tv.Value)
+			realTimeBarsOptionsBuffer.WriteString(";")
+		}
+		fields = append(fields, realTimeBarsOptionsBuffer.Bytes())
+
+	}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+//ReqCurrentTime Asks the current system time on the server side.
+func (ic *IbClient) ReqCurrentTime() {
+	v := 1
+	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
 
 	ic.reqChan <- msg
 }
