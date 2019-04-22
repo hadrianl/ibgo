@@ -2114,6 +2114,129 @@ func (ic *IbClient) ReqRealTimeBars(reqID int64, contract *Contract, barSize int
 	ic.reqChan <- msg
 }
 
+func (ic *IbClient) CancelRealTimeBars(reqID int64) {
+	v := 1
+
+	msg := makeMsgBuf(CANCEL_REAL_TIME_BARS, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*
+    #########################################################################
+    ################## Fundamental Data
+    #########################################################################
+*/
+
+
+
+/*ReqFundamentalData
+Call this function to receive fundamental data for
+        stocks. The appropriate market data subscription must be set up in
+        Account Management before you can receive this data.
+        Fundamental data will be returned at EWrapper.fundamentalData().
+
+        reqFundamentalData() can handle conid specified in the Contract object,
+        but not tradingClass or multiplier. This is because reqFundamentalData()
+        is used only for stocks and stocks do not have a multiplier and
+        trading class.
+
+        reqId:tickerId - The ID of the data request. Ensures that responses are
+             matched to requests if several requests are in process.
+        contract:Contract - This structure contains a description of the
+            contract for which fundamental data is being requested.
+        reportType:str - One of the following XML reports:
+            ReportSnapshot (company overview)
+            ReportsFinSummary (financial summary)
+            ReportRatios (financial ratios)
+            ReportsFinStatements (financial statements)
+            RESC (analyst estimates)
+            CalendarReport (company calendar) 
+*/
+func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportType string, fundamentalDataOptions []TagValue) {
+	
+
+	if ic.serverVersion < MIN_SERVER_VER_FUNDAMENTAL_DATA {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
+		return
+	}
+
+	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter in reqFundamentalData.")
+		return
+	}
+
+	v := 2
+	fields := make([]interface{}, 0)
+	fields = append(fields, REQ_FUNDAMENTAL_DATA, v, reqID)
+
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
+		fields = append(fields, contract.ContractID)
+	}
+
+	fields = append(fields,
+		contract.Symbol,
+		contract.SecurityType,
+		contract.Exchange,
+		contract.PrimaryExchange,
+		contract.Currency,
+		contract.LocalSymbol,
+		reportType)
+
+	
+		if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+			var fundamentalDataOptionsBuffer bytes.Buffer
+			for _, tv := range fundamentalDataOptions {
+				fundamentalDataOptionsBuffer.WriteString(tv.Tag)
+				fundamentalDataOptionsBuffer.WriteString("=")
+				fundamentalDataOptionsBuffer.WriteString(tv.Value)
+				fundamentalDataOptionsBuffer.WriteString(";")
+			}
+			fields = append(fields, fundamentalDataOptionsBuffer.Bytes())
+	
+		}
+
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) CancelFundamentalData(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_FUNDAMENTAL_DATA {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
+		return
+	}
+
+	v:=1
+
+	msg := makeMsgBuf(CANCEL_FUNDAMENTAL_DATA, v, reqID)
+
+	ic.reqChan <- msg
+
+}
+
+/*
+    ########################################################################
+    ################## News
+    #########################################################################
+*/
+
+func (ic *IbClient) ReqNewsProviders() {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_NEWS_PROVIDERS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support news providers request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_NEWS_PROVIDERS
+
+	ic.reqChan <- msg
+}
+
+
+
+
+
+
 //ReqCurrentTime Asks the current system time on the server side.
 func (ic *IbClient) ReqCurrentTime() {
 	v := 1
