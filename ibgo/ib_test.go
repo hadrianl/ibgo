@@ -1,13 +1,14 @@
 package ibgo
 
 import (
-	"log"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func TestIB(t *testing.T) {
-	log.SetFlags(log.Lmicroseconds)
+	log.SetLevel(log.InfoLevel)
 	ib := NewIB("127.0.0.1", 7497, 0)
 	if err := ib.Connect(); err != nil {
 		log.Panicf("Connect failed: %v", err)

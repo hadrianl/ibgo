@@ -5,7 +5,7 @@ ordercondition contains several OrderCondition, such as Price, Time, Margin, Exe
 package ibgo
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type OrderConditioner interface {

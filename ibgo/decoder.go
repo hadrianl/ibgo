@@ -3,10 +3,11 @@ package ibgo
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (

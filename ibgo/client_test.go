@@ -1,9 +1,10 @@
 package ibgo
 
 import (
-	"log"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 	// "time"
 )
 

@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,12 +36,7 @@ func bytesToTime(buf []byte) time.Time {
 // readMsg try to read the msg based on the message size
 func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 	sizeBuf := make([]byte, 4)
-
-	// if n, err := reader.Read(sizeBuf); err != nil || n != 4 {
-	// 	panic(fmt.Errorf("errReadSize: read %v err: %v", n, err))
-	// 	return nil, err
-	// }
-
+	//try to get 4bytes sizeBuf
 	for n, r := 0, 4; n < r; {
 		tempMsgBuf := make([]byte, r-n)
 		tn, err := reader.Read(tempMsgBuf)
@@ -52,9 +47,9 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 		copy(sizeBuf[n:n+tn], tempMsgBuf)
 		n += tn
 	}
-	// log.Println("Get SizeBuf:", sizeBuf)
+
 	size := int(binary.BigEndian.Uint32(sizeBuf))
-	// log.Println("Get SizeBuf:", size)
+	log.Debugf("readMsgBuf-> SizeBuf: %v", size)
 
 	msgBuf := make([]byte, size)
 
@@ -71,6 +66,7 @@ func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
 
 	}
 
+	log.Debugf("readMsgBuf-> msgBuf: %v", msgBuf)
 	return msgBuf, nil
 
 }
@@ -94,8 +90,8 @@ func field2Buf(msg interface{}) []byte {
 		b = encodeBool(msg.(bool))
 	case []byte:
 		b = msg.([]byte)
-	case time.Time:
-		b = encodeTime(msg.(time.Time))
+	// case time.Time:
+	// 	b = encodeTime(msg.(time.Time))
 
 	default:
 		log.Panic("errmakeMsgBuf: can't converst the param")
@@ -141,17 +137,6 @@ func decodeInt(field []byte) int64 {
 	return i
 }
 
-func decodeIntCheckUnset(field []byte) int64 {
-	if bytes.Equal(field, []byte{}) {
-		return math.MaxInt64
-	}
-	i, err := strconv.ParseInt(string(field), 10, 64)
-	if err != nil {
-		log.Panicf("errDecodeInt: %v", err)
-	}
-	return i
-}
-
 func decodeFloat(field []byte) float64 {
 	if bytes.Equal(field, []byte{}) || bytes.Equal(field, []byte("None")) {
 		return 0.0
@@ -163,6 +148,17 @@ func decodeFloat(field []byte) float64 {
 	}
 
 	return f
+}
+
+func decodeIntCheckUnset(field []byte) int64 {
+	if bytes.Equal(field, []byte{}) {
+		return math.MaxInt64
+	}
+	i, err := strconv.ParseInt(string(field), 10, 64)
+	if err != nil {
+		log.Panicf("errDecodeInt: %v", err)
+	}
+	return i
 }
 
 func decodeFloatCheckUnset(field []byte) float64 {
@@ -190,31 +186,31 @@ func decodeString(field []byte) string {
 	return string(field)
 }
 
-func decodeDate(field []byte) time.Time {
-	if len(field) != 8 || bytes.Equal(field, []byte{}) {
-		return time.Time{}
-	}
-	tstring := string(field)
-	t, err := time.Parse("20060102", tstring)
-	if err != nil {
-		log.Printf("errDeocodeDate: %v  tstring: %v", err, tstring)
-		return time.Time{}
-	}
+// func decodeDate(field []byte) time.Time {
+// 	if len(field) != 8 || bytes.Equal(field, []byte{}) {
+// 		return time.Time{}
+// 	}
+// 	tstring := string(field)
+// 	t, err := time.Parse("20060102", tstring)
+// 	if err != nil {
+// 		log.Printf("errDeocodeDate: %v  tstring: %v", err, tstring)
+// 		return time.Time{}
+// 	}
 
-	return t
-}
+// 	return t
+// }
 
-func decodeTime(field []byte, layout string) time.Time {
-	if bytes.Equal(field, []byte{}) {
-		return time.Time{}
-	}
+// func decodeTime(field []byte, layout string) time.Time {
+// 	if bytes.Equal(field, []byte{}) {
+// 		return time.Time{}
+// 	}
 
-	t, err := time.Parse(layout, string(field))
-	if err != nil {
-		log.Panicf("errDeocodeTime: %v  format: %v", field, layout)
-	}
-	return t
-}
+// 	t, err := time.Parse(layout, string(field))
+// 	if err != nil {
+// 		log.Panicf("errDeocodeTime: %v  format: %v", field, layout)
+// 	}
+// 	return t
+// }
 
 func encodeInt64(i int64) []byte {
 	bs := []byte(strconv.FormatInt(i, 10))
@@ -244,13 +240,13 @@ func encodeBool(b bool) []byte {
 
 }
 
-func encodeTagValue(tv TagValue) []byte {
-	return []byte(fmt.Sprintf("%v=%v;", tv.Tag, tv.Value))
-}
+// func encodeTagValue(tv TagValue) []byte {
+// 	return []byte(fmt.Sprintf("%v=%v;", tv.Tag, tv.Value))
+// }
 
-func encodeTime(t time.Time) []byte {
-	return []byte{} // TODO
-}
+// func encodeTime(t time.Time) []byte {
+// 	return []byte{}
+// }
 
 func handleEmpty(d interface{}) string {
 	switch d.(type) {
@@ -258,44 +254,19 @@ func handleEmpty(d interface{}) string {
 		v := d.(int64)
 		if v == UNSETINT {
 			return ""
-		} else {
-			return strconv.FormatInt(v, 10)
 		}
+		return strconv.FormatInt(v, 10)
+
 	case float64:
 		v := d.(float64)
 		if v == UNSETFLOAT {
 			return ""
-		} else {
-			return strconv.FormatFloat(v, 'g', 10, 64)
 		}
+		return strconv.FormatFloat(v, 'g', 10, 64)
+
 	default:
+		log.Println(d)
 		panic("handleEmpty error")
 
 	}
 }
-
-// func ibWrite(b *bytes.Buffer, msg interface{}) error {
-// 	switch reflect.TypeOf(msg) {
-// 	case string:
-// 		_, err := b.WriteString(msg.(string) + "\000")
-// 	case int64:
-// 		_, err := b.WriteString(strconv.FormatInt(msg.(int64), 10))
-// 	case float64:
-// 		_, err := b.WriteString(strconv.FormatFloat(msg.(float64), 'g', 10, 63))
-// 	case []byte:
-// 		_, err := b.Write(msg)
-// 	case bool:
-// 		var s string
-// 		if msg {
-// 			s = "1"
-// 		}else {
-// 			s = "0"
-// 		}
-// 		_, err := b.WriteString(s)
-// 	case time.Time:
-// 		t_string := msg.UTC().Format("20060102 15:04:05"+" UTC")
-// 		_, err := b.WriteString(t_string)
-// 	}
-
-// 	return err
-// }

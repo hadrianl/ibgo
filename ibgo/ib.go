@@ -1,5 +1,7 @@
 package ibgo
 
+import "time"
+
 type IB struct {
 	Client   *IbClient
 	Wrapper  Wrapper
@@ -52,6 +54,13 @@ func (ib *IB) DoSomeTest() {
 	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, []TagValue{})
 	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
 	// ef := ExecutionFilter{}
-	// ib.Client.ReqExecutions(699, ef)
-	ib.Client.ReqMktData(1, hsij9, "", false, false, nil)
+	// ib.Client.ReqExecutions(ib.Client.GetReqID(), ef)
+	// ib.Client.ReqMktData(1, hsij9, "", false, false, nil)
+	order := NewDefaultOrder()
+	order.LimitPrice = 30050
+	order.Action = "BUY"
+	order.OrderType = "LMT"
+	order.TotalQuantity = 1
+	time.Sleep(time.Second * 3)
+	ib.Client.PlaceOrder(2271, &hsij9, order)
 }

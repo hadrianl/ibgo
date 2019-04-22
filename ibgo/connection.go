@@ -3,9 +3,10 @@
 package ibgo
 
 import (
-	"log"
 	"net"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ConnectionState
@@ -110,7 +111,7 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 		return err
 	}
 
-	log.Println("TCP Connected to:", ibconn.conn.RemoteAddr())
+	log.Println("TCP Socket Connected to:", ibconn.conn.RemoteAddr())
 	// ibconn.event.connected <- 1
 
 	return err

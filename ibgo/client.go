@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
-	"log"
+
+	log "github.com/sirupsen/logrus"
+
+	// "log"
 	"net"
 	"strconv"
 	"strings"
@@ -61,7 +63,7 @@ func (ic *IbClient) ConnState() int {
 func (ic *IbClient) setConnState(connState int) {
 	OldConnState := ic.conn.state
 	ic.conn.state = connState
-	log.Printf("connState: %v -> %v", OldConnState, connState)
+	log.Infof("connState: %v -> %v", OldConnState, connState)
 }
 
 func (ic *IbClient) GetReqID() int64 {
@@ -72,6 +74,7 @@ func (ic *IbClient) GetReqID() int64 {
 //SetWrapper
 func (ic *IbClient) SetWrapper(wrapper IbWrapper) {
 	ic.wrapper = wrapper
+	log.Debug("setWrapper:", wrapper)
 	ic.decoder = &ibDecoder{wrapper: ic.wrapper}
 }
 
@@ -100,7 +103,7 @@ func (ic *IbClient) Disconnect() error {
 		return err
 	}
 
-	defer log.Println("Disconnected!")
+	defer log.Info("Disconnected!")
 	ic.wg.Wait()
 	ic.setConnState(DISCONNECTED)
 	return nil
@@ -133,7 +136,7 @@ func (ic *IbClient) startAPI() error {
 
 // handshake with the TWS or GateWay to ensure the version
 func (ic *IbClient) HandShake() error {
-	log.Println("Try to handShake with TWS or GateWay...")
+	log.Debug("Try to handShake with TWS or GateWay...")
 	var msg bytes.Buffer
 	head := []byte("API\x00")
 	minVer := []byte(strconv.FormatInt(int64(MIN_CLIENT_VER), 10))
@@ -145,7 +148,7 @@ func (ic *IbClient) HandShake() error {
 	msg.Write(head)
 	msg.Write(sizeofCV)
 	msg.Write(clientVersion)
-	log.Println("HandShake Init...")
+	log.Debug("HandShake Init...")
 	if _, err := ic.writer.Write(msg.Bytes()); err != nil {
 		return err
 	}
@@ -154,7 +157,7 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	log.Println("Recv ServerInfo...")
+	log.Debug("Recv ServerInfo...")
 	if msgBuf, err := readMsgBuf(ic.reader); err != nil {
 		return err
 	} else {
@@ -164,8 +167,8 @@ func (ic *IbClient) HandShake() error {
 		ic.connTime = bytesToTime(serverInfo[1])
 		ic.decoder.setVersion(ic.serverVersion) // Init Decoder
 		ic.decoder.setmsgID2process()
-		log.Println("ServerVersion:", ic.serverVersion)
-		log.Println("ConnectionTime:", ic.connTime)
+		log.Info("ServerVersion:", ic.serverVersion)
+		log.Info("ConnectionTime:", ic.connTime)
 	}
 
 	if err := ic.startAPI(); err != nil {
@@ -179,6 +182,7 @@ func (ic *IbClient) HandShake() error {
 }
 
 func (ic *IbClient) reset() {
+	log.Debug("reset IbClient.")
 	ic.reqIDSeq = 0
 	ic.conn = &IbConnection{}
 	ic.conn.reset()
@@ -775,7 +779,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 
 	fields = append(fields,
 		contract.Symbol,
-		contract.SecurityID,
+		contract.SecurityType,
 		contract.Expiry,
 		contract.Strike,
 		contract.Right,
@@ -817,10 +821,10 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		if order.AuxPrice != UNSETFLOAT {
 			fields = append(fields, order.AuxPrice)
 		} else {
-			fields = append(fields, handleEmpty(order.AuxPrice))
+			fields = append(fields, float64(0))
 		}
 	} else {
-		fields = append(fields, "")
+		fields = append(fields, handleEmpty(order.AuxPrice))
 	}
 
 	fields = append(fields,
@@ -904,7 +908,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		order.SettlingFirm,
 		order.AllOrNone,
 		handleEmpty(order.MinQty),
-		handleEmpty(order),
+		handleEmpty(order.PercentOffset),
 		order.ETradeOnly,
 		order.FirmQuoteOnly,
 		handleEmpty(order.NBBOPriceCap),
@@ -958,6 +962,8 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 			handleEmpty(order.ScaleInitLevelSize))
 	}
 
+	fields = append(fields, handleEmpty(order.ScalePriceIncrement))
+
 	if ic.serverVersion >= MIN_SERVER_VER_SCALE_ORDERS3 && order.ScalePriceIncrement != UNSETFLOAT && order.ScalePriceIncrement > 0.0 {
 		fields = append(fields,
 			handleEmpty(order.ScalePriceAdjustValue),
@@ -985,7 +991,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	}
 
 	if ic.serverVersion >= MIN_SERVER_VER_OPT_OUT_SMART_ROUTING {
-		fields = append(fields, order.HedgeType)
+		fields = append(fields, order.OptOutSmartRouting)
 	}
 
 	if ic.serverVersion >= MIN_SERVER_VER_PTA_ORDERS {
@@ -1075,7 +1081,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		fields = append(fields,
 			order.AdjustedOrderType,
 			order.TriggerPrice,
-			order.LimitPrice,
+			order.LimitPriceOffset,
 			order.AdjustedStopPrice,
 			order.AdjustedStopLimitPrice,
 			order.AdjustedTrailingAmount,
@@ -2502,21 +2508,27 @@ func (ic *IbClient) ReqCurrentTime() {
 //--------------------------three major goroutine -----------------------------------------------------
 //goRequest will get the req from reqChan and send it to TWS
 func (ic *IbClient) goRequest() {
-	log.Println("Start goRequest!")
-	defer log.Println("End goRequest!")
+	log.Info("Start goRequest!")
+	defer log.Info("End goRequest!")
 	defer ic.wg.Done()
 requestLoop:
 	for {
 		select {
 		case req := <-ic.reqChan:
-			_, err := ic.writer.Write(req)
+			if !ic.IsConnected() {
+				ic.wrapper.error(NO_VALID_ID, NOT_CONNECTED.code, NOT_CONNECTED.msg)
+				break
+			}
+
+			nn, err := ic.writer.Write(req)
+			log.Print(nn, req)
 			if err != nil {
+				log.Print(err)
 				ic.writer.Reset(ic.conn)
 				ic.errChan <- err
 			}
 			ic.writer.Flush()
 		case <-ic.terminatedSignal:
-			// fmt.Println("goRequest terminate")
 			break requestLoop
 		}
 	}
@@ -2526,10 +2538,9 @@ requestLoop:
 //goReceive receive the msg from the socket, get the fields and put them into msgChan
 //goReceive handle the msgBuf which is different from the offical.Not continuously read, but split first and then decode
 func (ic *IbClient) goReceive() {
-	// defer
-	log.Println("Start goReceive!")
+	log.Info("Start goReceive!")
 	// buf := make([]byte, 0, 4096)
-	defer log.Println("End goReceive!")
+	defer log.Info("End goReceive!")
 	defer ic.wg.Done()
 	for {
 		// buf := []byte
@@ -2537,9 +2548,11 @@ func (ic *IbClient) goReceive() {
 		// fmt.Printf("msgBuf: %v err: %v", msgBuf, err)
 		if err, ok := err.(*net.OpError); ok {
 			if !err.Temporary() {
+				log.Debugf("errgoReceive: %v", err)
 				break
 			}
-			log.Println(err)
+			log.Errorf("errgoReceive Temporary: %v", err)
+			ic.reader.Reset(ic.conn)
 		} else if err != nil {
 			ic.errChan <- err
 			ic.reader.Reset(ic.conn)
@@ -2555,8 +2568,8 @@ func (ic *IbClient) goReceive() {
 
 //goDecode decode the fields received from the msgChan
 func (ic *IbClient) goDecode() {
-	log.Println("Start goDecode!")
-	defer log.Println("End goDecode!")
+	log.Info("Start goDecode!")
+	defer log.Info("End goDecode!")
 	defer ic.wg.Done()
 
 decodeLoop:
@@ -2565,11 +2578,9 @@ decodeLoop:
 		select {
 		case f := <-ic.msgChan:
 			ic.decoder.interpret(f...)
-			// log.Println(f)
 		case e := <-ic.errChan:
-			fmt.Println(e)
+			log.Error(e)
 		case <-ic.terminatedSignal:
-			// fmt.Println("goDecode terminate")
 			break decodeLoop
 		}
 	}
