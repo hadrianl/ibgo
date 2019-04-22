@@ -41,7 +41,8 @@ type IbClient struct {
 	terminatedSignal chan int
 	clientVersion    Version
 	serverVersion    Version
-	serverTime       time.Time
+	connTime         time.Time
+	extraAuth        bool
 	wg               sync.WaitGroup
 }
 
@@ -51,6 +52,10 @@ func NewIbClient(wrapper IbWrapper) *IbClient {
 	ic.reset()
 
 	return ic
+}
+
+func (ic *IbClient) ConnState() int {
+	return ic.conn.state
 }
 
 func (ic *IbClient) setConnState(connState int) {
@@ -156,11 +161,11 @@ func (ic *IbClient) HandShake() error {
 		serverInfo := splitMsgBuf(msgBuf)
 		v, _ := strconv.Atoi(string(serverInfo[0]))
 		ic.serverVersion = Version(v)
-		ic.serverTime = bytesToTime(serverInfo[1])
+		ic.connTime = bytesToTime(serverInfo[1])
 		ic.decoder.setVersion(ic.serverVersion) // Init Decoder
 		ic.decoder.setmsgID2process()
 		log.Println("ServerVersion:", ic.serverVersion)
-		log.Println("ServerTime:", ic.serverTime)
+		log.Println("ConnectionTime:", ic.connTime)
 	}
 
 	if err := ic.startAPI(); err != nil {
@@ -448,7 +453,7 @@ func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, 
 		v,
 		reqID,
 		contract.ContractID,
-		Contract.Symbol,
+		contract.Symbol,
 		contract.SecurityID,
 		contract.Expiry,
 		contract.Strike,
@@ -502,7 +507,7 @@ func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volati
 		v,
 		reqID,
 		contract.ContractID,
-		Contract.Symbol,
+		contract.Symbol,
 		contract.SecurityID,
 		contract.Expiry,
 		contract.Strike,
@@ -521,9 +526,9 @@ func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volati
 
 	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
 		var optPrcOptBuffer bytes.Buffer
-		tagValuesCount := len(impVolOptions)
+		tagValuesCount := len(optPrcOptions)
 		fields = append(fields, tagValuesCount)
-		for _, tv := range impVolOptions {
+		for _, tv := range optPrcOptions {
 			optPrcOptBuffer.WriteString(tv.Tag)
 			optPrcOptBuffer.WriteString("=")
 			optPrcOptBuffer.WriteString(tv.Value)
@@ -578,7 +583,7 @@ func (ic *IbClient) ExerciseOptions(reqID int64, contract *Contract, exerciseAct
 	fields = append(fields, EXERCISE_OPTIONS, v, reqID)
 
 	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
-		fields := append(fields, contract.ContractID)
+		fields = append(fields, contract.ContractID)
 	}
 
 	fields = append(fields,
@@ -592,7 +597,7 @@ func (ic *IbClient) ExerciseOptions(reqID int64, contract *Contract, exerciseAct
 		contract.LocalSymbol)
 
 	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
-		fields := append(fields, contract.TradingClass)
+		fields = append(fields, contract.TradingClass)
 	}
 
 	fields = append(fields,
@@ -758,7 +763,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	fields := make([]interface{}, 0)
 	fields = append(fields, PLACE_ORDER)
 
-	if ic.serverTime < MIN_SERVER_VER_ORDER_CONTAINER {
+	if ic.serverVersion < MIN_SERVER_VER_ORDER_CONTAINER {
 		fields = append(fields, v)
 	}
 
@@ -780,11 +785,11 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		contract.Currency,
 		contract.LocalSymbol)
 
-	if ic.serverTime >= MIN_SERVER_VER_TRADING_CLASS {
+	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
 		fields = append(fields, contract.TradingClass)
 	}
 
-	if ic.serverTime >= MIN_SERVER_VER_SEC_ID_TYPE {
+	if ic.serverVersion >= MIN_SERVER_VER_SEC_ID_TYPE {
 		fields = append(fields, contract.SecurityIDType, contract.SecurityID)
 	}
 
@@ -1045,7 +1050,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 			order.RandomizePrice)
 	}
 
-	if ic.serverTime >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
+	if ic.serverVersion >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
 		if order.OrderType == "PEG BENCH" {
 			fields = append(fields,
 				order.ReferenceContractID,
@@ -1058,9 +1063,8 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		orderConditionsCount := len(order.Conditions)
 		fields = append(fields, orderConditionsCount)
 		for _, cond := range order.Conditions {
-			fields = append(fields,
-				cond.CondType,
-				cond.toFields()...)
+			fields = append(fields, cond.CondType())
+			fields = append(fields, cond.toFields()...)
 		}
 		if orderConditionsCount > 0 {
 			fields = append(fields,
@@ -1413,7 +1417,7 @@ func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 
 func (ic *IbClient) ReqContractDetails(reqID int64, contract *Contract) {
 	if ic.serverVersion < MIN_SERVER_VER_SEC_ID_TYPE &&
-		(contract.SecurityID != "" || contract.SecurityID != "") {
+		(contract.SecurityIDType != "" || contract.SecurityID != "") {
 		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
 		return
 	}
@@ -2123,12 +2127,10 @@ func (ic *IbClient) CancelRealTimeBars(reqID int64) {
 }
 
 /*
-    #########################################################################
-    ################## Fundamental Data
-    #########################################################################
+   #########################################################################
+   ################## Fundamental Data
+   #########################################################################
 */
-
-
 
 /*ReqFundamentalData
 Call this function to receive fundamental data for
@@ -2151,10 +2153,9 @@ Call this function to receive fundamental data for
             ReportRatios (financial ratios)
             ReportsFinStatements (financial statements)
             RESC (analyst estimates)
-            CalendarReport (company calendar) 
+            CalendarReport (company calendar)
 */
 func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportType string, fundamentalDataOptions []TagValue) {
-	
 
 	if ic.serverVersion < MIN_SERVER_VER_FUNDAMENTAL_DATA {
 		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
@@ -2183,18 +2184,17 @@ func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportTy
 		contract.LocalSymbol,
 		reportType)
 
-	
-		if ic.serverVersion >= MIN_SERVER_VER_LINKING {
-			var fundamentalDataOptionsBuffer bytes.Buffer
-			for _, tv := range fundamentalDataOptions {
-				fundamentalDataOptionsBuffer.WriteString(tv.Tag)
-				fundamentalDataOptionsBuffer.WriteString("=")
-				fundamentalDataOptionsBuffer.WriteString(tv.Value)
-				fundamentalDataOptionsBuffer.WriteString(";")
-			}
-			fields = append(fields, fundamentalDataOptionsBuffer.Bytes())
-	
+	if ic.serverVersion >= MIN_SERVER_VER_LINKING {
+		var fundamentalDataOptionsBuffer bytes.Buffer
+		for _, tv := range fundamentalDataOptions {
+			fundamentalDataOptionsBuffer.WriteString(tv.Tag)
+			fundamentalDataOptionsBuffer.WriteString("=")
+			fundamentalDataOptionsBuffer.WriteString(tv.Value)
+			fundamentalDataOptionsBuffer.WriteString(";")
 		}
+		fields = append(fields, fundamentalDataOptionsBuffer.Bytes())
+
+	}
 
 	msg := makeMsgBuf(fields...)
 
@@ -2207,7 +2207,7 @@ func (ic *IbClient) CancelFundamentalData(reqID int64) {
 		return
 	}
 
-	v:=1
+	v := 1
 
 	msg := makeMsgBuf(CANCEL_FUNDAMENTAL_DATA, v, reqID)
 
@@ -2216,9 +2216,9 @@ func (ic *IbClient) CancelFundamentalData(reqID int64) {
 }
 
 /*
-    ########################################################################
-    ################## News
-    #########################################################################
+   ########################################################################
+   ################## News
+   #########################################################################
 */
 
 func (ic *IbClient) ReqNewsProviders() {
@@ -2227,15 +2227,269 @@ func (ic *IbClient) ReqNewsProviders() {
 		return
 	}
 
-	msg := makeMsgBuf(REQ_NEWS_PROVIDERS
+	msg := makeMsgBuf(REQ_NEWS_PROVIDERS)
 
 	ic.reqChan <- msg
 }
 
+func (ic *IbClient) ReqNewsArticle(reqID int64, providerCode string, articleID string, newsArticleOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_NEWS_ARTICLE {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support news article request.")
+		return
+	}
 
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_NEWS_ARTICLE,
+		reqID,
+		providerCode,
+		articleID)
 
+	if ic.serverVersion >= MIN_SERVER_VER_NEWS_QUERY_ORIGINS {
+		var newsArticleOptionsBuffer bytes.Buffer
+		for _, tv := range newsArticleOptions {
+			newsArticleOptionsBuffer.WriteString(tv.Tag)
+			newsArticleOptionsBuffer.WriteString("=")
+			newsArticleOptionsBuffer.WriteString(tv.Value)
+			newsArticleOptionsBuffer.WriteString(";")
+		}
+		fields = append(fields, newsArticleOptionsBuffer.Bytes())
 
+	}
+	msg := makeMsgBuf(fields...)
 
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqHistoricalNews(reqID int64, contractID int64, providerCode string, startDateTime string, endDateTime string, totalResults int64, historicalNewsOptions []TagValue) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTORICAL_NEWS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical news request.")
+		return
+	}
+
+	fields := make([]interface{}, 0)
+	fields = append(fields,
+		REQ_HISTORICAL_NEWS,
+		reqID,
+		contractID,
+		providerCode,
+		startDateTime,
+		endDateTime,
+		totalResults)
+
+	if ic.serverVersion >= MIN_SERVER_VER_NEWS_QUERY_ORIGINS {
+		var historicalNewsOptionsBuffer bytes.Buffer
+		for _, tv := range historicalNewsOptions {
+			historicalNewsOptionsBuffer.WriteString(tv.Tag)
+			historicalNewsOptionsBuffer.WriteString("=")
+			historicalNewsOptionsBuffer.WriteString(tv.Value)
+			historicalNewsOptionsBuffer.WriteString(";")
+		}
+		fields = append(fields, historicalNewsOptionsBuffer.Bytes())
+
+	}
+	msg := makeMsgBuf(fields...)
+
+	ic.reqChan <- msg
+}
+
+/*
+   #########################################################################
+   ################## Display Groups
+   #########################################################################
+*/
+
+func (ic *IbClient) QueryDisplayGroups(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support queryDisplayGroups request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(QUERY_DISPLAY_GROUPS, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*SubscribeToGroupEvents
+reqId:int - The unique number associated with the notification.
+        groupId:int - The ID of the group, currently it is a number from 1 to 7.
+            This is the display group subscription request sent by the API to TWS.
+*/
+func (ic *IbClient) SubscribeToGroupEvents(reqID int64, groupID int) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support subscribeToGroupEvents request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(SUBSCRIBE_TO_GROUP_EVENTS, v, reqID, groupID)
+
+	ic.reqChan <- msg
+}
+
+/*UpdateDisplayGroup
+reqId:int - The requestId specified in subscribeToGroupEvents().
+        contractInfo:str - The encoded value that uniquely represents the
+            contract in IB. Possible values include:
+
+            none = empty selection
+            contractID@exchange - any non-combination contract.
+                Examples: 8314@SMART for IBM SMART; 8314@ARCA for IBM @ARCA.
+            combo = if any combo is selected.
+*/
+func (ic *IbClient) UpdateDisplayGroup(reqID int64, contractInfo string) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support updateDisplayGroup request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(UPDATE_DISPLAY_GROUP, v, reqID, contractInfo)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) UnsubscribeFromGroupEvents(reqID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support unsubscribeFromGroupEvents request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(UPDATE_DISPLAY_GROUP, v, reqID)
+
+	ic.reqChan <- msg
+}
+
+/*VerifyRequest
+For IB's internal purpose. Allows to provide means of verification
+        between the TWS and third party programs.
+*/
+func (ic *IbClient) VerifyRequest(apiName string, apiVersion string) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		return
+	}
+
+	if ic.extraAuth {
+		ic.wrapper.error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
+			"  Intent to authenticate needs to be expressed during initial connect request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(VERIFY_REQUEST, v, apiName, apiVersion)
+
+	ic.reqChan <- msg
+}
+
+/*VerifyMessage
+For IB's internal purpose. Allows to provide means of verification
+        between the TWS and third party programs.
+*/
+func (ic *IbClient) VerifyMessage(apiData string) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(VERIFY_MESSAGE, v, apiData)
+
+	ic.reqChan <- msg
+}
+
+/*VerifyAndAuthRequest
+For IB's internal purpose. Allows to provide means of verification
+        between the TWS and third party programs.
+*/
+func (ic *IbClient) VerifyAndAuthRequest(apiName string, apiVersion string, opaqueIsvKey string) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		return
+	}
+
+	if ic.extraAuth {
+		ic.wrapper.error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
+			"  Intent to authenticate needs to be expressed during initial connect request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(VERIFY_AND_AUTH_REQUEST, v, apiName, apiVersion, opaqueIsvKey)
+
+	ic.reqChan <- msg
+}
+
+/*VerifyAndAuthMessage
+For IB's internal purpose. Allows to provide means of verification
+        between the TWS and third party programs.
+*/
+func (ic *IbClient) VerifyAndAuthMessage(apiData string, xyzResponse string) {
+	if ic.serverVersion < MIN_SERVER_VER_LINKING {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		return
+	}
+
+	v := 1
+	msg := makeMsgBuf(VERIFY_MESSAGE, v, apiData, xyzResponse)
+
+	ic.reqChan <- msg
+}
+
+/*ReqSecDefOptParams
+Requests security definition option parameters for viewing a
+        contract's option chain reqId the ID chosen for the request
+        underlyingSymbol futFopExchange The exchange on which the returned
+        options are trading. Can be set to the empty string "" for all
+        exchanges. underlyingSecType The type of the underlying security,
+        i.e. STK underlyingConId the contract ID of the underlying security.
+        Response comes via EWrapper.securityDefinitionOptionParameter()
+*/
+func (ic *IbClient) ReqSecDefOptParams(reqID int64, underlyingSymbol string, futFopExchange string, underlyingSecurityType string, underlyingContractID int64) {
+	if ic.serverVersion < MIN_SERVER_VER_SEC_DEF_OPT_PARAMS_REQ {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support security definition option request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_SEC_DEF_OPT_PARAMS, reqID, underlyingSymbol, futFopExchange, underlyingSecurityType, underlyingContractID)
+
+	ic.reqChan <- msg
+}
+
+/*ReqSoftDollarTiers
+Requests pre-defined Soft Dollar Tiers. This is only supported for
+        registered professional advisors and hedge and mutual funds who have
+        configured Soft Dollar Tiers in Account Management.
+*/
+func (ic *IbClient) ReqSoftDollarTiers(reqID int64) {
+	msg := makeMsgBuf(REQ_SOFT_DOLLAR_TIERS, reqID)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqFamilyCodes() {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_FAMILY_CODES {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support family codes request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_FAMILY_CODES)
+
+	ic.reqChan <- msg
+}
+
+func (ic *IbClient) ReqMatchingSymbols(reqID int64, pattern string) {
+	if ic.serverVersion < MIN_SERVER_VER_REQ_MATCHING_SYMBOLS {
+		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support matching symbols request.")
+		return
+	}
+
+	msg := makeMsgBuf(REQ_MATCHING_SYMBOLS, reqID, pattern)
+
+	ic.reqChan <- msg
+}
 
 //ReqCurrentTime Asks the current system time on the server side.
 func (ic *IbClient) ReqCurrentTime() {

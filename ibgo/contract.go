@@ -88,3 +88,9 @@ type ContractDescription struct {
 	Contract           Contract
 	DerivativeSecTypes []string
 }
+
+func NewComboLeg() ComboLeg {
+	comboLeg := ComboLeg{}
+	comboLeg.ExemptCode = -1
+	return comboLeg
+}

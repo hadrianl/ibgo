@@ -1,5 +1,18 @@
 package ibgo
 
+const (
+	CUSTOMER int64 = iota
+	FIRM
+	UNKNOWN
+)
+
+const (
+	AUCTION_UNSET int64 = iota
+	AUCTION_MATCH
+	AUCTION_IMPROVEMENT
+	AUCTION_TRANSPARENT
+)
+
 type Order struct {
 	OrderID                       int64
 	ClientID                      int64
@@ -145,7 +158,7 @@ type Order struct {
 	AdjustedStopLimitPrice       float64
 	AdjustedTrailingAmount       float64
 	AdjustableTrailingUnit       int64
-	LmtPriceOffset               float64
+	LimitPriceOffset             float64
 
 	Conditions            []OrderConditioner
 	ConditionsCancelOrder bool
@@ -196,4 +209,70 @@ type SoftDollarTier struct {
 	Name        string
 	Value       string
 	DisplayName string
+}
+
+func NewDefaultOrder() *Order {
+	order := &Order{}
+	order.LimitPrice = UNSETFLOAT
+	order.AuxPrice = UNSETFLOAT
+
+	order.Transmit = true
+
+	order.MinQty = UNSETINT
+	order.PercentOffset = UNSETFLOAT
+	order.TrailStopPrice = UNSETFLOAT
+	order.TrailingPercent = UNSETFLOAT
+
+	order.OpenClose = "O"
+
+	order.ExemptCode = -1
+
+	order.ETradeOnly = true
+	order.FirmQuoteOnly = true
+	order.NBBOPriceCap = UNSETFLOAT
+
+	order.AuctionStrategy = AUCTION_UNSET
+	order.StartingPrice = UNSETFLOAT
+	order.StockRefPrice = UNSETFLOAT
+	order.Delta = UNSETFLOAT
+
+	order.StockRangeLower = UNSETFLOAT
+	order.StockRangeUpper = UNSETFLOAT
+
+	order.Volatility = UNSETFLOAT
+	order.VolatilityType = UNSETINT
+	order.DeltaNeutralAuxPrice = UNSETFLOAT
+	order.ReferencePriceType = UNSETINT
+
+	order.BasisPoints = UNSETFLOAT
+	order.BasisPointsType = UNSETINT
+
+	order.ScaleInitLevelSize = UNSETINT
+	order.ScaleSubsLevelSize = UNSETINT
+	order.ScalePriceIncrement = UNSETFLOAT
+	order.ScalePriceAdjustValue = UNSETFLOAT
+	order.ScalePriceAdjustInterval = UNSETINT
+	order.ScaleProfitOffset = UNSETFLOAT
+	order.ScaleInitPosition = UNSETINT
+	order.ScaleInitFillQty = UNSETINT
+
+	order.TriggerPrice = UNSETFLOAT
+	order.AdjustedStopPrice = UNSETFLOAT
+	order.AdjustedStopLimitPrice = UNSETFLOAT
+	order.AdjustedTrailingAmount = UNSETFLOAT
+	order.LimitPriceOffset = UNSETFLOAT
+
+	order.CashQty = UNSETFLOAT
+
+	return order
+}
+
+func NewOrderState() *OrderState {
+	orderState := &OrderState{}
+
+	orderState.Commission = UNSETFLOAT
+	orderState.MinCommission = UNSETFLOAT
+	orderState.MaxCommission = UNSETFLOAT
+
+	return orderState
 }

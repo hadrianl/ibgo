@@ -1,7 +1,6 @@
 package ibgo
 
 import (
-	"github.com/golang/protobuf/ptypes/empty"
 	"bufio"
 	"bytes"
 	"encoding/binary"
@@ -253,23 +252,25 @@ func encodeTime(t time.Time) []byte {
 	return []byte{} // TODO
 }
 
-func handleEmpty(d interface{}) string{
-	switch  {
-	case ok, v := d.(int64);ok:
-		if v == UNSETINT{
+func handleEmpty(d interface{}) string {
+	switch d.(type) {
+	case int64:
+		v := d.(int64)
+		if v == UNSETINT {
 			return ""
-		}else{
+		} else {
 			return strconv.FormatInt(v, 10)
 		}
-	case ok, v := d.(float32);ok:
-		if v == UNSETFLOAT{
+	case float64:
+		v := d.(float64)
+		if v == UNSETFLOAT {
 			return ""
-		}else{
-			return strconv.FormatFloat(f, 'g', 10, 64)
+		} else {
+			return strconv.FormatFloat(v, 'g', 10, 64)
 		}
 	default:
 		panic("handleEmpty error")
-		
+
 	}
 }
 

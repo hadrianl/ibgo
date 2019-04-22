@@ -104,7 +104,6 @@ func (ibconn *IbConnection) connect(host string, port int) error {
 		log.Printf("ResolveTCPAddr Error: %v", err)
 		return err
 	}
-
 	ibconn.conn, err = net.DialTCP("tcp4", nil, addr)
 	if err != nil {
 		log.Printf("DialTCP Error: %v", err)

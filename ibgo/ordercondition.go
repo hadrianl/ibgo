@@ -6,16 +6,17 @@ package ibgo
 
 import (
 	"log"
-	"time"
 )
 
 type OrderConditioner interface {
+	CondType() int64
+	setCondType(condType int64)
 	decode(fields [][]byte)
 	toFields() []interface{}
 }
 
 type OrderCondition struct {
-	CondType                int64
+	conditionType           int64
 	IsConjunctionConnection bool
 
 	// Price = 1
@@ -33,9 +34,17 @@ func (oc OrderCondition) decode(fields [][]byte) {
 
 func (oc OrderCondition) toFields() []interface{} {
 	if oc.IsConjunctionConnection {
-		return []interface{"a"}
+		return []interface{}{"a"}
 	}
-	return []interface{"o"}
+	return []interface{}{"o"}
+}
+
+func (oc OrderCondition) CondType() int64 {
+	return oc.conditionType
+}
+
+func (oc OrderCondition) setCondType(condType int64) {
+	oc.conditionType = condType
 }
 
 type ExecutionCondition struct {
@@ -53,7 +62,7 @@ func (ec ExecutionCondition) decode(fields [][]byte) { // 4 fields
 }
 
 func (ec ExecutionCondition) toFields() []interface{} {
-	return []interface{ec.OrderCondition.toFields()..., ec.SecType, ec.Exchange, ec.Symbol}
+	return append(ec.OrderCondition.toFields(), ec.SecType, ec.Exchange, ec.Symbol)
 }
 
 type OperatorCondition struct {
@@ -67,9 +76,8 @@ func (oc OperatorCondition) decode(fields [][]byte) { // 2 fields
 }
 
 func (oc OperatorCondition) toFields() []interface{} {
-	return []interface{ec.OrderCondition.toFields()..., oc.IsMore}
+	return append(oc.OrderCondition.toFields(), oc.IsMore)
 }
-
 
 type MarginCondition struct {
 	OperatorCondition
@@ -82,7 +90,7 @@ func (mc MarginCondition) decode(fields [][]byte) { // 3 fields
 }
 
 func (mc MarginCondition) toFields() []interface{} {
-	return []interface{ec.OperatorCondition.toFields()...,  mc.Percent}
+	return append(mc.OperatorCondition.toFields(), mc.Percent)
 }
 
 type ContractCondition struct {
@@ -98,7 +106,7 @@ func (cc ContractCondition) decode(fields [][]byte) { // 4 fields
 }
 
 func (cc ContractCondition) toFields() []interface{} {
-	return []interface{ec.OperatorCondition.toFields()..., cc.ConId, cc.Exchange}
+	return append(cc.OperatorCondition.toFields(), cc.ConId, cc.Exchange)
 }
 
 type TimeCondition struct {
@@ -113,7 +121,7 @@ func (tc TimeCondition) decode(fields [][]byte) { // 3 fields
 }
 
 func (tc TimeCondition) toFields() []interface{} {
-	return []interface{tc.OperatorCondition.toFields()..., tc.Time}
+	return append(tc.OperatorCondition.toFields(), tc.Time)
 }
 
 type PriceCondition struct {
@@ -129,7 +137,7 @@ func (pc PriceCondition) decode(fields [][]byte) { // 6 fields
 }
 
 func (pc PriceCondition) toFields() []interface{} {
-	return []interface{pc.ContractCondition.toFields()..., pc.Price, pc.TriggerMethod}
+	return append(pc.ContractCondition.toFields(), pc.Price, pc.TriggerMethod)
 }
 
 type PercentChangeCondition struct {
@@ -143,7 +151,7 @@ func (pcc PercentChangeCondition) decode(fields [][]byte) { // 5 fields
 }
 
 func (pcc PercentChangeCondition) toFields() []interface{} {
-	return []interface{pcc.ContractCondition.toFields()..., pcc.ChangePercent}
+	return append(pcc.ContractCondition.toFields(), pcc.ChangePercent)
 }
 
 type VolumeCondition struct {
@@ -157,7 +165,7 @@ func (vc VolumeCondition) decode(fields [][]byte) { // 5 fields
 }
 
 func (vc VolumeCondition) toFields() []interface{} {
-	return []interface{vc.ContractCondition.toFields()..., vc.Volume}
+	return append(vc.ContractCondition.toFields(), vc.Volume)
 }
 
 func InitOrderCondition(conType int64) (OrderConditioner, int) {
@@ -166,21 +174,27 @@ func InitOrderCondition(conType int64) (OrderConditioner, int) {
 	switch conType {
 	case 1:
 		cond = PriceCondition{}
+		cond.setCondType(1)
 		condSize = 6
 	case 3:
 		cond = TimeCondition{}
+		cond.setCondType(3)
 		condSize = 3
 	case 4:
 		cond = MarginCondition{}
+		cond.setCondType(4)
 		condSize = 3
 	case 5:
 		cond = ExecutionCondition{}
+		cond.setCondType(5)
 		condSize = 4
 	case 6:
 		cond = VolumeCondition{}
+		cond.setCondType(6)
 		condSize = 5
 	case 7:
 		cond = PercentChangeCondition{}
+		cond.setCondType(7)
 		condSize = 5
 	default:
 		log.Panicf("errInitOrderCondition: Unkonwn conType: %v", conType)

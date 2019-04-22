@@ -833,7 +833,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		o.AdjustedOrderType = decodeString(f[81])
 		o.TriggerPrice = decodeFloat(f[82])
 		o.TrailStopPrice = decodeFloat(f[83])
-		o.LmtPriceOffset = decodeFloat(f[84])
+		o.LimitPriceOffset = decodeFloat(f[84])
 		o.AdjustedStopPrice = decodeFloat(f[85])
 		o.AdjustedStopLimitPrice = decodeFloat(f[86])
 		o.AdjustedTrailingAmount = decodeFloat(f[87])

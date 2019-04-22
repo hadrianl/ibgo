@@ -26,9 +26,31 @@ type ScannerSubscription struct {
 	MaturityDateAbove        string
 	MaturityDateBelow        string
 	CouponRateAbove          float64
-	CouponRateBelow          float32
+	CouponRateBelow          float64
 	ExcludeConvertible       bool
 	AverageOptionVolumeAbove int64
 	ScannerSettingPairs      string
 	StockTypeFilter          string
+}
+
+func NewScanData(contractDetails ContractDetails, rank int64, distance string, benchmark string, projection string, legsStr string) *ScanData {
+	scanData := &ScanData{contractDetails, rank, distance, benchmark, projection, legsStr}
+	return scanData
+}
+
+func NewScannerSubscription() *ScannerSubscription {
+	scannerSubscription := &ScannerSubscription{}
+
+	scannerSubscription.NumberOfRows = -1
+	scannerSubscription.AbovePrice = UNSETFLOAT
+	scannerSubscription.BelowPrice = UNSETFLOAT
+	scannerSubscription.AboveVolume = UNSETINT
+	scannerSubscription.MarketCapAbove = UNSETFLOAT
+	scannerSubscription.MarketCapBelow = UNSETFLOAT
+
+	scannerSubscription.CouponRateAbove = UNSETFLOAT
+	scannerSubscription.CouponRateBelow = UNSETFLOAT
+	scannerSubscription.AverageOptionVolumeAbove = UNSETINT
+
+	return scannerSubscription
 }

@@ -114,7 +114,7 @@ type DepthMktDataDescription struct {
 	SecurityType    string
 	ListingExchange string
 	ServiceDataType string
-	AggGroup        int64
+	AggGroup        int64 //default: UNSETINT
 }
 
 type NewsProvider struct {
