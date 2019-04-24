@@ -45,7 +45,7 @@ func (ib *IB) DisConnect() error {
 }
 
 func (ib *IB) DoSomeTest() {
-	hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", nil, nil}
+	// hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
 	// ib.Client.ReqCurrentTime()
 	// ib.Client.ReqAutoOpenOrders(true)
@@ -56,11 +56,12 @@ func (ib *IB) DoSomeTest() {
 	// ef := ExecutionFilter{}
 	// ib.Client.ReqExecutions(ib.Client.GetReqID(), ef)
 	// ib.Client.ReqMktData(1, hsij9, "", false, false, nil)
-	order := NewDefaultOrder()
-	order.LimitPrice = 30050
-	order.Action = "BUY"
-	order.OrderType = "LMT"
-	order.TotalQuantity = 1
+	// order := NewDefaultOrder()
+	// order.LimitPrice = 30050
+	// order.Action = "BUY"
+	// order.OrderType = "LMT"
+	// order.TotalQuantity = 1
 	time.Sleep(time.Second * 3)
-	ib.Client.PlaceOrder(2271, &hsij9, order)
+	ib.Client.ReqPnL(1, "DU1382837", "")
+	// ib.Client.PlaceOrder(2271, &hsij9, order)
 }

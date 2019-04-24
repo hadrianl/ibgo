@@ -32,8 +32,6 @@ type IbClient struct {
 	writer           *bufio.Writer
 	wrapper          IbWrapper
 	decoder          *ibDecoder
-	inBuffer         *bytes.Buffer
-	outBuffer        *bytes.Buffer
 	connectOption    []byte
 	reqIDSeq         int64
 	reqChan          chan []byte
@@ -188,8 +186,6 @@ func (ic *IbClient) reset() {
 	ic.conn.reset()
 	ic.reader = bufio.NewReader(ic.conn)
 	ic.writer = bufio.NewWriter(ic.conn)
-	ic.inBuffer = bytes.NewBuffer(make([]byte, 0, 4096))
-	ic.outBuffer = bytes.NewBuffer(make([]byte, 0, 4096))
 	ic.reqChan = make(chan []byte, 10)
 	ic.errChan = make(chan error, 10)
 	ic.msgChan = make(chan [][]byte, 100)

@@ -28,27 +28,30 @@ type IbConnection struct {
 	numMsgSent   int
 	numBytesRecv int
 	numMsgRecv   int
-	event        socketEvent
-	em           extraMethods
+	// event        socketEvent
+	// em           extraMethods
 }
 
-type socketEvent struct {
-	connected    chan int
-	disconnected chan int
-	hasError     chan error
-	hasData      chan []byte
-}
+// type socketEvent struct {
+// 	connected    chan int
+// 	disconnected chan int
+// 	hasError     chan error
+// 	hasData      chan []byte
+// }
 
-type extraMethods interface {
-	priceSizeTick()
-	tcpDataArrived()
-	tcpDataProcessed()
-}
+// type extraMethods interface {
+// 	priceSizeTick()
+// 	tcpDataArrived()
+// 	tcpDataProcessed()
+// }
 
 func (ibconn *IbConnection) Write(msg []byte) (int, error) {
 	n, err := ibconn.conn.Write(msg)
+
 	ibconn.numBytesSent += n
 	ibconn.numMsgSent++
+
+	log.WithFields(log.Fields{"func": "write", "count": n}).Debug(msg)
 	return n, err
 }
 
@@ -62,6 +65,8 @@ func (ibconn *IbConnection) Read(b []byte) (int, error) {
 	// } else {
 	// 	ibconn.event.hasData <- b
 	// }
+
+	log.WithFields(log.Fields{"func": "read", "count": n}).Debug(b)
 
 	return n, err
 }
