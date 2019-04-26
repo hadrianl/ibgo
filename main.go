@@ -1,7 +1,6 @@
 package main
 
 import (
-<<<<<<< HEAD
 	"time"
 
 	"github.com/hadrianl/ibgo/ibapi"
@@ -92,40 +91,4 @@ func main() {
 	// if err := ib.DisConnect(); err != nil {
 	// 	log.Panicf("DisConnect failed: %v", err)
 	// }
-=======
-	"fmt"
-	"strconv"
-)
-
-// type testingStruct struct {
-// 	A  int64
-// 	BS *B
-// }
-// type B struct {
-// 	C int64
-// }
-
-func main() {
-	// f := ""
-	// b := []byte(f)
-	// c := []byte(" ")
-	// fmt.Println(len(bytes.Split(b, c)))
-	// fmt.Println("string:", f, "byte:", b, c)
-	// var t []testingStruct
-	// fmt.Println(t)
-	// fmt.Println(len(t))
-	// fmt.Println(t == nil)
-	// t = []testingStruct{}
-	// fmt.Println(t == nil)
-	// fmt.Println(new(testingStruct) == nil)
-	// fmt.Println(&testingStruct{} == nil)
-	// var ts *testingStruct
-	// fmt.Println(ts == nil)
-	// var t *testingStruct
-	// fmt.Println(t == nil)
-	// fmt.Println(t.BS)
-	// fmt.Println(t.BS == nil)
-	i, err := strconv.ParseInt(string([]byte{'1'}), 10, 64)
-	fmt.Println(i, err)
->>>>>>> f2840998567b04c698134653f69f15c8f6fa7b40
 }
