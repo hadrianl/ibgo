@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 const (
 	CUSTOMER int64 = iota
@@ -13,6 +13,7 @@ const (
 	AUCTION_TRANSPARENT
 )
 
+//Order is the origin type of order,do not try to new one unless you definitely know how to fill all the fields!Use NewDefaultOrder instead!
 type Order struct {
 	OrderID                       int64
 	ClientID                      int64

@@ -1,3 +1,4 @@
 {
-    "go.inferGopath": true
+    "go.inferGopath": false,
+    "go.formatTool": "goimports"
 }

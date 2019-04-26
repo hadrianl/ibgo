@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 type ScanData struct {
 	ContractDetails ContractDetails

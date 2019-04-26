@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 //Contract is the base struct about the information of specified symbol(identify by ContractID)
 type Contract struct {

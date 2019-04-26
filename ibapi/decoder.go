@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 import (
 	"bytes"
@@ -156,19 +156,19 @@ func (d *ibDecoder) wrapTickSize(f [][]byte) {
 	reqID := decodeInt(f[1])
 	tickType := decodeInt(f[2])
 	size := decodeInt(f[3])
-	d.wrapper.tickSize(reqID, tickType, size)
+	d.wrapper.TickSize(reqID, tickType, size)
 }
 
 func (d *ibDecoder) wrapNextValidID(f [][]byte) {
 	reqID := decodeInt(f[1])
-	d.wrapper.nextValidID(reqID)
+	d.wrapper.NextValidID(reqID)
 
 }
 
 func (d *ibDecoder) wrapManagedAccounts(f [][]byte) {
 	accNames := decodeString(f[1])
 	accsList := strings.Split(accNames, ",")
-	d.wrapper.managedAccounts(accsList)
+	d.wrapper.ManagedAccounts(accsList)
 
 }
 
@@ -178,7 +178,7 @@ func (d *ibDecoder) wrapUpdateAccountValue(f [][]byte) {
 	currency := decodeString(f[3])
 	accName := decodeString(f[4])
 
-	d.wrapper.updateAccountValue(tag, val, currency, accName)
+	d.wrapper.UpdateAccountValue(tag, val, currency, accName)
 }
 
 func (d *ibDecoder) wrapUpdateAccountTime(f [][]byte) {
@@ -191,7 +191,7 @@ func (d *ibDecoder) wrapUpdateAccountTime(f [][]byte) {
 	}
 	t = t.AddDate(today.Year(), int(today.Month())-1, today.Day()-1)
 
-	d.wrapper.updateAccountTime(t)
+	d.wrapper.UpdateAccountTime(t)
 }
 
 func (d *ibDecoder) wrapError(f [][]byte) {
@@ -199,14 +199,14 @@ func (d *ibDecoder) wrapError(f [][]byte) {
 	errorCode := decodeInt(f[2])
 	errorString := decodeString(f[3])
 
-	d.wrapper.error(reqID, errorCode, errorString)
+	d.wrapper.Error(reqID, errorCode, errorString)
 }
 
 func (d *ibDecoder) wrapCurrentTime(f [][]byte) {
 	ts := decodeInt(f[1])
 	t := time.Unix(ts, 0)
 
-	d.wrapper.currentTime(t)
+	d.wrapper.CurrentTime(t)
 }
 
 func (d *ibDecoder) wrapUpdateMktDepth(f [][]byte) {
@@ -217,7 +217,7 @@ func (d *ibDecoder) wrapUpdateMktDepth(f [][]byte) {
 	price := decodeFloat(f[5])
 	size := decodeInt(f[6])
 
-	d.wrapper.updateMktDepth(reqID, position, operation, side, price, size)
+	d.wrapper.UpdateMktDepth(reqID, position, operation, side, price, size)
 
 }
 
@@ -231,7 +231,7 @@ func (d *ibDecoder) wrapUpdateMktDepthL2(f [][]byte) {
 	size := decodeInt(f[7])
 	isSmartDepth := decodeBool(f[8])
 
-	d.wrapper.updateMktDepthL2(reqID, position, marketMaker, operation, side, price, size, isSmartDepth)
+	d.wrapper.UpdateMktDepthL2(reqID, position, marketMaker, operation, side, price, size, isSmartDepth)
 
 }
 
@@ -241,20 +241,20 @@ func (d *ibDecoder) wrapUpdateNewsBulletin(f [][]byte) {
 	newsMessage := decodeString(f[3])
 	originExch := decodeString(f[4])
 
-	d.wrapper.updateNewsBulletin(msgID, msgType, newsMessage, originExch)
+	d.wrapper.UpdateNewsBulletin(msgID, msgType, newsMessage, originExch)
 }
 
 func (d *ibDecoder) wrapReceiveFA(f [][]byte) {
 	faData := decodeInt(f[1])
 	cxml := decodeString(f[2])
 
-	d.wrapper.receiveFA(faData, cxml)
+	d.wrapper.ReceiveFA(faData, cxml)
 }
 
 func (d *ibDecoder) wrapScannerParameters(f [][]byte) {
 	xml := decodeString(f[1])
 
-	d.wrapper.scannerParameters(xml)
+	d.wrapper.ScannerParameters(xml)
 }
 
 func (d *ibDecoder) wrapTickGeneric(f [][]byte) {
@@ -262,7 +262,7 @@ func (d *ibDecoder) wrapTickGeneric(f [][]byte) {
 	tickType := decodeInt(f[2])
 	value := decodeFloat(f[3])
 
-	d.wrapper.tickGeneric(reqID, tickType, value)
+	d.wrapper.TickGeneric(reqID, tickType, value)
 
 }
 
@@ -271,7 +271,7 @@ func (d *ibDecoder) wrapTickString(f [][]byte) {
 	tickType := decodeInt(f[2])
 	value := decodeString(f[3])
 
-	d.wrapper.tickString(reqID, tickType, value)
+	d.wrapper.TickString(reqID, tickType, value)
 
 }
 
@@ -286,7 +286,7 @@ func (d *ibDecoder) wrapTickEFP(f [][]byte) {
 	dividendImpact := decodeFloat(f[8])
 	dividendsToLastTradeDate := decodeFloat(f[9])
 
-	d.wrapper.tickEFP(reqID, tickType, basisPoints, formattedBasisPoints, totalDividends, holdDays, futureLastTradeDate, dividendImpact, dividendsToLastTradeDate)
+	d.wrapper.TickEFP(reqID, tickType, basisPoints, formattedBasisPoints, totalDividends, holdDays, futureLastTradeDate, dividendImpact, dividendsToLastTradeDate)
 
 }
 
@@ -294,7 +294,7 @@ func (d *ibDecoder) wrapMarketDataType(f [][]byte) {
 	reqID := decodeInt(f[1])
 	marketDataType := decodeInt(f[2])
 
-	d.wrapper.marketDataType(reqID, marketDataType)
+	d.wrapper.MarketDataType(reqID, marketDataType)
 }
 
 func (d *ibDecoder) wrapAccountSummary(f [][]byte) {
@@ -304,49 +304,49 @@ func (d *ibDecoder) wrapAccountSummary(f [][]byte) {
 	value := decodeString(f[4])
 	currency := decodeString(f[5])
 
-	d.wrapper.accountSummary(reqID, account, tag, value, currency)
+	d.wrapper.AccountSummary(reqID, account, tag, value, currency)
 }
 
 func (d *ibDecoder) wrapVerifyMessageAPI(f [][]byte) {
 	// Deprecated Function: keep it temporarily, not know how it works
 	apiData := decodeString(f[1])
 
-	d.wrapper.verifyMessageAPI(apiData)
+	d.wrapper.VerifyMessageAPI(apiData)
 }
 
 func (d *ibDecoder) wrapVerifyCompleted(f [][]byte) {
 	isSuccessful := decodeBool(f[1])
 	err := decodeString(f[1])
 
-	d.wrapper.verifyCompleted(isSuccessful, err)
+	d.wrapper.VerifyCompleted(isSuccessful, err)
 }
 
 func (d *ibDecoder) wrapDisplayGroupList(f [][]byte) {
 	reqID := decodeInt(f[1])
 	groups := decodeString(f[2])
 
-	d.wrapper.displayGroupList(reqID, groups)
+	d.wrapper.DisplayGroupList(reqID, groups)
 }
 
 func (d *ibDecoder) wrapDisplayGroupUpdated(f [][]byte) {
 	reqID := decodeInt(f[1])
 	contractInfo := decodeString(f[2])
 
-	d.wrapper.displayGroupUpdated(reqID, contractInfo)
+	d.wrapper.DisplayGroupUpdated(reqID, contractInfo)
 }
 
 func (d *ibDecoder) wrapVerifyAndAuthMessageAPI(f [][]byte) {
 	apiData := decodeString(f[1])
 	xyzChallange := decodeString(f[2])
 
-	d.wrapper.verifyAndAuthMessageAPI(apiData, xyzChallange)
+	d.wrapper.VerifyAndAuthMessageAPI(apiData, xyzChallange)
 }
 
 func (d *ibDecoder) wrapVerifyAndAuthCompleted(f [][]byte) {
 	isSuccessful := decodeBool(f[1])
 	err := decodeString(f[2])
 
-	d.wrapper.verifyAndAuthCompleted(isSuccessful, err)
+	d.wrapper.VerifyAndAuthCompleted(isSuccessful, err)
 }
 
 func (d *ibDecoder) wrapAccountUpdateMulti(f [][]byte) {
@@ -357,14 +357,14 @@ func (d *ibDecoder) wrapAccountUpdateMulti(f [][]byte) {
 	val := decodeString(f[5])
 	currency := decodeString(f[6])
 
-	d.wrapper.accountUpdateMulti(reqID, acc, modelCode, tag, val, currency)
+	d.wrapper.AccountUpdateMulti(reqID, acc, modelCode, tag, val, currency)
 }
 
 func (d *ibDecoder) wrapFundamentalData(f [][]byte) {
 	reqID := decodeInt(f[1])
 	data := decodeString(f[2])
 
-	d.wrapper.fundamentalData(reqID, data)
+	d.wrapper.FundamentalData(reqID, data)
 }
 
 //--------------wrap end func ---------------------------------
@@ -372,60 +372,60 @@ func (d *ibDecoder) wrapFundamentalData(f [][]byte) {
 func (d *ibDecoder) wrapAccountDownloadEnd(f [][]byte) {
 	accName := string(f[1])
 
-	d.wrapper.accountDownloadEnd(accName)
+	d.wrapper.AccountDownloadEnd(accName)
 }
 
 func (d *ibDecoder) wrapOpenOrderEnd(f [][]byte) {
 
-	d.wrapper.openOrderEnd()
+	d.wrapper.OpenOrderEnd()
 }
 
 func (d *ibDecoder) wrapExecDetailsEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.execDetailsEnd(reqID)
+	d.wrapper.ExecDetailsEnd(reqID)
 }
 
 func (d *ibDecoder) wrapTickSnapshotEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.tickSnapshotEnd(reqID)
+	d.wrapper.TickSnapshotEnd(reqID)
 }
 
 func (d *ibDecoder) wrapPositionEnd(f [][]byte) {
 	// v := decodeInt(f[0])
 
-	d.wrapper.positionEnd()
+	d.wrapper.PositionEnd()
 }
 
 func (d *ibDecoder) wrapAccountSummaryEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.accountSummaryEnd(reqID)
+	d.wrapper.AccountSummaryEnd(reqID)
 }
 
 func (d *ibDecoder) wrapPositionMultiEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.positionMultiEnd(reqID)
+	d.wrapper.PositionMultiEnd(reqID)
 }
 
 func (d *ibDecoder) wrapAccountUpdateMultiEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.accountUpdateMultiEnd(reqID)
+	d.wrapper.AccountUpdateMultiEnd(reqID)
 }
 
 func (d *ibDecoder) wrapSecurityDefinitionOptionParameterEndMsg(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.securityDefinitionOptionParameterEnd(reqID)
+	d.wrapper.SecurityDefinitionOptionParameterEnd(reqID)
 }
 
 func (d *ibDecoder) wrapContractDetailsEnd(f [][]byte) {
 	reqID := decodeInt(f[1])
 
-	d.wrapper.contractDetailsEnd(reqID)
+	d.wrapper.ContractDetailsEnd(reqID)
 }
 
 // ------------------------------------------------------------------
@@ -448,7 +448,7 @@ func (d *ibDecoder) processTickPriceMsg(f [][]byte) {
 		}
 	}
 
-	d.wrapper.tickPrice(reqID, tickType, price, attrib)
+	d.wrapper.TickPrice(reqID, tickType, price, attrib)
 
 	var sizeTickType int64
 	switch tickType {
@@ -469,7 +469,7 @@ func (d *ibDecoder) processTickPriceMsg(f [][]byte) {
 	}
 
 	if sizeTickType != NOT_SET {
-		d.wrapper.tickSize(reqID, sizeTickType, size)
+		d.wrapper.TickSize(reqID, sizeTickType, size)
 	}
 
 }
@@ -500,7 +500,7 @@ func (d *ibDecoder) processOrderStatusMsg(f [][]byte) {
 		mktCapPrice = float64(0)
 	}
 
-	d.wrapper.orderStatus(orderID, status, filled, remaining, avgFilledPrice, permID, parentID, lastFillPrice, clientID, whyHeld, mktCapPrice)
+	d.wrapper.OrderStatus(orderID, status, filled, remaining, avgFilledPrice, permID, parentID, lastFillPrice, clientID, whyHeld, mktCapPrice)
 
 }
 
@@ -870,7 +870,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 		f = f[1:]
 	}
 
-	d.wrapper.openOrder(o.OrderID, c, o, orderState)
+	d.wrapper.OpenOrder(o.OrderID, c, o, orderState)
 
 }
 
@@ -916,7 +916,7 @@ func (d *ibDecoder) processPortfolioValueMsg(f [][]byte) {
 		c.PrimaryExchange = decodeString(f[16])
 	}
 
-	d.wrapper.updatePortfolio(c, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accName)
+	d.wrapper.UpdatePortfolio(c, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accName)
 
 }
 func (d *ibDecoder) processContractDataMsg(f [][]byte) {
@@ -1022,7 +1022,7 @@ func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 		cd.RealExpirationDate = decodeString(f[18])
 	}
 
-	d.wrapper.contractDetails(reqID, &cd)
+	d.wrapper.ContractDetails(reqID, &cd)
 
 }
 func (d *ibDecoder) processBondContractDataMsg(f [][]byte) {
@@ -1111,7 +1111,7 @@ func (d *ibDecoder) processBondContractDataMsg(f [][]byte) {
 		f = f[1:]
 	}
 
-	d.wrapper.bondContractDetails(reqID, c)
+	d.wrapper.BondContractDetails(reqID, c)
 
 }
 func (d *ibDecoder) processScannerDataMsg(f [][]byte) {
@@ -1137,12 +1137,12 @@ func (d *ibDecoder) processScannerDataMsg(f [][]byte) {
 		sd.Projection = decodeString(f[16])
 		sd.Legs = decodeString(f[17])
 
-		d.wrapper.scannerData(reqID, sd.Rank, &(sd.ContractDetails), sd.Distance, sd.Benchmark, sd.Projection, sd.Legs)
+		d.wrapper.ScannerData(reqID, sd.Rank, &(sd.ContractDetails), sd.Distance, sd.Benchmark, sd.Projection, sd.Legs)
 		f = f[16:]
 
 	}
 
-	d.wrapper.scannerDataEnd(reqID)
+	d.wrapper.ScannerDataEnd(reqID)
 
 }
 func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
@@ -1222,7 +1222,7 @@ func (d *ibDecoder) processExecutionDataMsg(f [][]byte) {
 		e.LastLiquidity = decodeInt(f[20])
 	}
 
-	d.wrapper.execDetails(reqID, &c, &e)
+	d.wrapper.ExecDetails(reqID, &c, &e)
 
 }
 func (d *ibDecoder) processHistoricalDataMsg(f [][]byte) {
@@ -1249,11 +1249,11 @@ func (d *ibDecoder) processHistoricalDataMsg(f [][]byte) {
 		}
 		bar.BarCount = decodeInt(f[11])
 		f = f[8:]
-		d.wrapper.historicalData(reqID, bar)
+		d.wrapper.HistoricalData(reqID, bar)
 	}
 	f = f[1:]
 
-	d.wrapper.historicalDataEnd(reqID, startDatestr, endDateStr)
+	d.wrapper.HistoricalDataEnd(reqID, startDatestr, endDateStr)
 
 }
 func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
@@ -1267,7 +1267,7 @@ func (d *ibDecoder) processHistoricalDataUpdateMsg(f [][]byte) {
 	bar.Low = decodeFloat(f[6])
 	bar.Volume = decodeFloat(f[7])
 
-	d.wrapper.historicalDataUpdate(reqID, bar)
+	d.wrapper.HistoricalDataUpdate(reqID, bar)
 
 }
 func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
@@ -1284,7 +1284,7 @@ func (d *ibDecoder) processRealTimeBarMsg(f [][]byte) {
 	rtb.Wap = decodeFloat(f[8])
 	rtb.Count = decodeInt(f[9])
 	// HELP: passing by value is not a good way,why not pass pointer type?
-	d.wrapper.realtimeBar(reqID, rtb.Time, rtb.Open, rtb.High, rtb.Low, rtb.Close, rtb.Volume, rtb.Wap, rtb.Count)
+	d.wrapper.RealtimeBar(reqID, rtb.Time, rtb.Open, rtb.High, rtb.Low, rtb.Close, rtb.Volume, rtb.Wap, rtb.Count)
 }
 
 func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
@@ -1343,7 +1343,7 @@ func (d *ibDecoder) processTickOptionComputationMsg(f [][]byte) {
 		undPrice = UNSETFLOAT
 	}
 
-	d.wrapper.tickOptionComputation(reqID, tickType, impliedVol, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)
+	d.wrapper.TickOptionComputation(reqID, tickType, impliedVol, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)
 
 }
 
@@ -1356,7 +1356,7 @@ func (d *ibDecoder) processDeltaNeutralValidationMsg(f [][]byte) {
 	deltaNeutralContract.Delta = decodeFloat(f[3])
 	deltaNeutralContract.Price = decodeFloat(f[4])
 
-	d.wrapper.deltaNeutralValidation(reqID, deltaNeutralContract)
+	d.wrapper.DeltaNeutralValidation(reqID, deltaNeutralContract)
 
 }
 
@@ -1373,7 +1373,7 @@ func (d *ibDecoder) processCommissionReportMsg(f [][]byte) {
 	cr.Yield = decodeFloat(f[5])
 	cr.YieldRedemptionDate = decodeInt(f[6])
 
-	d.wrapper.commissionReport(cr)
+	d.wrapper.CommissionReport(cr)
 
 }
 func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
@@ -1408,7 +1408,7 @@ func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
 		avgCost = decodeFloat(f[12])
 	}
 
-	d.wrapper.position(acc, c, p, avgCost)
+	d.wrapper.Position(acc, c, p, avgCost)
 
 }
 func (d *ibDecoder) processPositionMultiMsg(f [][]byte) {
@@ -1432,7 +1432,7 @@ func (d *ibDecoder) processPositionMultiMsg(f [][]byte) {
 	avgCost := decodeFloat(f[14])
 	modelCode := decodeString(f[15])
 
-	d.wrapper.positionMulti(reqID, acc, modelCode, c, p, avgCost)
+	d.wrapper.PositionMulti(reqID, acc, modelCode, c, p, avgCost)
 
 }
 func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
@@ -1457,7 +1457,7 @@ func (d *ibDecoder) processSecurityDefinitionOptionParameterMsg(f [][]byte) {
 		f = f[1:]
 	}
 
-	d.wrapper.securityDefinitionOptionParameter(reqID, exchange, underlyingContractID, tradingClass, multiplier, expirations, strikes)
+	d.wrapper.SecurityDefinitionOptionParameter(reqID, exchange, underlyingContractID, tradingClass, multiplier, expirations, strikes)
 
 }
 
@@ -1474,7 +1474,7 @@ func (d *ibDecoder) processSoftDollarTiersMsg(f [][]byte) {
 		f = f[3:]
 	}
 
-	d.wrapper.softDollarTiers(reqID, tiers)
+	d.wrapper.SoftDollarTiers(reqID, tiers)
 
 }
 func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
@@ -1488,7 +1488,7 @@ func (d *ibDecoder) processFamilyCodesMsg(f [][]byte) {
 		f = f[2:]
 	}
 
-	d.wrapper.familyCodes(familyCodes)
+	d.wrapper.FamilyCodes(familyCodes)
 
 }
 func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
@@ -1513,7 +1513,7 @@ func (d *ibDecoder) processSymbolSamplesMsg(f [][]byte) {
 		f = f[6:]
 	}
 
-	d.wrapper.symbolSamples(reqID, contractDescriptions)
+	d.wrapper.SymbolSamples(reqID, contractDescriptions)
 
 }
 func (d *ibDecoder) processSmartComponents(f [][]byte) {
@@ -1530,7 +1530,7 @@ func (d *ibDecoder) processSmartComponents(f [][]byte) {
 		f = f[3:]
 	}
 
-	d.wrapper.smartComponents(reqID, smartComponents)
+	d.wrapper.SmartComponents(reqID, smartComponents)
 
 }
 func (d *ibDecoder) processTickReqParams(f [][]byte) {
@@ -1539,7 +1539,7 @@ func (d *ibDecoder) processTickReqParams(f [][]byte) {
 	bboExchange := decodeString(f[2])
 	snapshotPermissions := decodeInt(f[3])
 
-	d.wrapper.tickReqParams(tickerID, minTick, bboExchange, snapshotPermissions)
+	d.wrapper.TickReqParams(tickerID, minTick, bboExchange, snapshotPermissions)
 }
 
 func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
@@ -1560,14 +1560,14 @@ func (d *ibDecoder) processMktDepthExchanges(f [][]byte) {
 		f = f[2:]
 	}
 
-	d.wrapper.mktDepthExchanges(depthMktDataDescriptions)
+	d.wrapper.MktDepthExchanges(depthMktDataDescriptions)
 }
 
 func (d *ibDecoder) processHeadTimestamp(f [][]byte) {
 	reqID := decodeInt(f[0])
 	headTimestamp := decodeString(f[1])
 
-	d.wrapper.headTimestamp(reqID, headTimestamp)
+	d.wrapper.HeadTimestamp(reqID, headTimestamp)
 }
 func (d *ibDecoder) processTickNews(f [][]byte) {
 	tickerID := decodeInt(f[0])
@@ -1577,7 +1577,7 @@ func (d *ibDecoder) processTickNews(f [][]byte) {
 	headline := decodeString(f[4])
 	extraData := decodeString(f[5])
 
-	d.wrapper.tickNews(tickerID, timeStamp, providerCode, articleID, headline, extraData)
+	d.wrapper.TickNews(tickerID, timeStamp, providerCode, articleID, headline, extraData)
 }
 func (d *ibDecoder) processNewsProviders(f [][]byte) {
 	newsProviders := []NewsProvider{}
@@ -1590,14 +1590,14 @@ func (d *ibDecoder) processNewsProviders(f [][]byte) {
 		f = f[2:]
 	}
 
-	d.wrapper.newsProviders(newsProviders)
+	d.wrapper.NewsProviders(newsProviders)
 }
 func (d *ibDecoder) processNewsArticle(f [][]byte) {
 	reqID := decodeInt(f[0])
 	articleType := decodeInt(f[1])
 	articleText := decodeString(f[2])
 
-	d.wrapper.newsArticle(reqID, articleType, articleText)
+	d.wrapper.NewsArticle(reqID, articleType, articleText)
 }
 func (d *ibDecoder) processHistoricalNews(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1606,13 +1606,13 @@ func (d *ibDecoder) processHistoricalNews(f [][]byte) {
 	articleID := decodeString(f[3])
 	headline := decodeString(f[4])
 
-	d.wrapper.historicalNews(reqID, time, providerCode, articleID, headline)
+	d.wrapper.HistoricalNews(reqID, time, providerCode, articleID, headline)
 }
 func (d *ibDecoder) processHistoricalNewsEnd(f [][]byte) {
 	reqID := decodeInt(f[0])
 	hasMore := decodeBool(f[1])
 
-	d.wrapper.historicalNewsEnd(reqID, hasMore)
+	d.wrapper.HistoricalNewsEnd(reqID, hasMore)
 }
 func (d *ibDecoder) processHistogramData(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1627,21 +1627,21 @@ func (d *ibDecoder) processHistogramData(f [][]byte) {
 		f = f[2:]
 	}
 
-	d.wrapper.histogramData(reqID, histogram)
+	d.wrapper.HistogramData(reqID, histogram)
 }
 func (d *ibDecoder) processRerouteMktDataReq(f [][]byte) {
 	reqID := decodeInt(f[0])
 	contractID := decodeInt(f[1])
 	exchange := decodeString(f[2])
 
-	d.wrapper.rerouteMktDataReq(reqID, contractID, exchange)
+	d.wrapper.RerouteMktDataReq(reqID, contractID, exchange)
 }
 func (d *ibDecoder) processRerouteMktDepthReq(f [][]byte) {
 	reqID := decodeInt(f[0])
 	contractID := decodeInt(f[1])
 	exchange := decodeString(f[2])
 
-	d.wrapper.rerouteMktDepthReq(reqID, contractID, exchange)
+	d.wrapper.RerouteMktDepthReq(reqID, contractID, exchange)
 }
 func (d *ibDecoder) processMarketRuleMsg(f [][]byte) {
 	marketRuleID := decodeInt(f[0])
@@ -1655,7 +1655,7 @@ func (d *ibDecoder) processMarketRuleMsg(f [][]byte) {
 		f = f[2:]
 	}
 
-	d.wrapper.marketRule(marketRuleID, priceIncrements)
+	d.wrapper.MarketRule(marketRuleID, priceIncrements)
 }
 func (d *ibDecoder) processPnLMsg(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1673,7 +1673,7 @@ func (d *ibDecoder) processPnLMsg(f [][]byte) {
 		f = f[1:]
 	}
 
-	d.wrapper.pnl(reqID, dailyPnL, unrealizedPnL, realizedPnL)
+	d.wrapper.Pnl(reqID, dailyPnL, unrealizedPnL, realizedPnL)
 
 }
 func (d *ibDecoder) processPnLSingleMsg(f [][]byte) {
@@ -1695,7 +1695,7 @@ func (d *ibDecoder) processPnLSingleMsg(f [][]byte) {
 
 	value := decodeFloat(f[3])
 
-	d.wrapper.pnlSingle(reqID, position, dailyPnL, unrealizedPnL, realizedPnL, value)
+	d.wrapper.PnlSingle(reqID, position, dailyPnL, unrealizedPnL, realizedPnL, value)
 }
 func (d *ibDecoder) processHistoricalTicks(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1715,7 +1715,7 @@ func (d *ibDecoder) processHistoricalTicks(f [][]byte) {
 
 	done := decodeBool(f[1])
 
-	d.wrapper.historicalTicks(reqID, ticks, done)
+	d.wrapper.HistoricalTicks(reqID, ticks, done)
 }
 func (d *ibDecoder) processHistoricalTicksBidAsk(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1743,7 +1743,7 @@ func (d *ibDecoder) processHistoricalTicksBidAsk(f [][]byte) {
 
 	done := decodeBool(f[1])
 
-	d.wrapper.historicalTicksBidAsk(reqID, ticks, done)
+	d.wrapper.HistoricalTicksBidAsk(reqID, ticks, done)
 }
 func (d *ibDecoder) processHistoricalTicksLast(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1771,7 +1771,7 @@ func (d *ibDecoder) processHistoricalTicksLast(f [][]byte) {
 
 	done := decodeBool(f[1])
 
-	d.wrapper.historicalTicksLast(reqID, ticks, done)
+	d.wrapper.HistoricalTicksLast(reqID, ticks, done)
 }
 func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
 	reqID := decodeInt(f[0])
@@ -1793,7 +1793,7 @@ func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
 		exchange := decodeString(f[6])
 		specialConditions := decodeString(f[7])
 
-		d.wrapper.tickByTickAllLast(reqID, tickType, time, price, size, tickAttribLast, exchange, specialConditions)
+		d.wrapper.TickByTickAllLast(reqID, tickType, time, price, size, tickAttribLast, exchange, specialConditions)
 	case 3:
 		bidPrice := decodeFloat(f[3])
 		askPrice := decodeFloat(f[4])
@@ -1805,11 +1805,11 @@ func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
 		tickAttribBidAsk.BidPastLow = mask&1 != 0
 		tickAttribBidAsk.AskPastHigh = mask&2 != 0
 
-		d.wrapper.tickByTickBidAsk(reqID, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
+		d.wrapper.TickByTickBidAsk(reqID, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
 	case 4:
 		midPoint := decodeFloat(f[3])
 
-		d.wrapper.tickByTickMidPoint(reqID, time, midPoint)
+		d.wrapper.TickByTickMidPoint(reqID, time, midPoint)
 	}
 }
 func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
@@ -1817,7 +1817,7 @@ func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
 	apiClientID := decodeInt(f[1])
 	apiOrderID := decodeInt(f[2])
 
-	d.wrapper.orderBound(reqID, apiClientID, apiOrderID)
+	d.wrapper.OrderBound(reqID, apiClientID, apiOrderID)
 
 }
 func (d *ibDecoder) processMarketDepthL2Msg(f [][]byte) {

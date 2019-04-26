@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 import (
 	"bufio"
@@ -174,7 +174,7 @@ func (ic *IbClient) HandShake() error {
 	}
 
 	ic.setConnState(CONNECTED)
-	ic.wrapper.connectAck()
+	ic.wrapper.ConnectAck()
 
 	return nil
 }
@@ -225,13 +225,13 @@ Call this function to request market data. The market data
 func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList string, snapshot bool, regulatorySnapshot bool, mktDataOptions []TagValue) {
 	switch {
 	case ic.serverVersion < MIN_SERVER_VER_DELTA_NEUTRAL && contract.DeltaNeutralContract != nil:
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
 		return
 	case ic.serverVersion < MIN_SERVER_VER_REQ_MKT_DATA_CONID && contract.ContractID > 0:
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
 		return
 	case ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "":
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqMktData.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqMktData.")
 		return
 	}
 
@@ -335,7 +335,7 @@ The API can receive frozen market data from Trader
 */
 func (ic *IbClient) ReqMarketDataType(marketDataType int64) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_MARKET_DATA_TYPE {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market data type requests.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market data type requests.")
 		return
 	}
 
@@ -350,7 +350,7 @@ func (ic *IbClient) ReqMarketDataType(marketDataType int64) {
 
 func (ic *IbClient) ReqSmartComponents(reqID int64, bboExchange string) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_SMART_COMPONENTS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support smart components request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support smart components request.")
 		return
 	}
 
@@ -361,7 +361,7 @@ func (ic *IbClient) ReqSmartComponents(reqID int64, bboExchange string) {
 
 func (ic *IbClient) ReqMarketRule(marketRuleID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_MARKET_RULES {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support market rule requests.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support market rule requests.")
 		return
 	}
 
@@ -372,12 +372,12 @@ func (ic *IbClient) ReqMarketRule(marketRuleID int64) {
 
 func (ic *IbClient) ReqTickByTickData(reqID int64, contract *Contract, tickType string, numberOfTicks int64, ignoreSize bool) {
 	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK_IGNORE_SIZE {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support ignoreSize and numberOfTicks parameters in tick-by-tick data requests.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support ignoreSize and numberOfTicks parameters in tick-by-tick data requests.")
 		return
 	}
 
@@ -409,7 +409,7 @@ func (ic *IbClient) ReqTickByTickData(reqID int64, contract *Contract, tickType 
 
 func (ic *IbClient) CancelTickByTickData(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_TICK_BY_TICK {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support tick-by-tick data requests.")
 		return
 	}
 
@@ -436,12 +436,12 @@ Call this function to calculate volatility for a supplied
 */
 func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, optionPrice float64, underPrice float64, impVolOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
 		return
 	}
 
@@ -491,12 +491,12 @@ func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, 
 func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volatility float64, underPrice float64, optPrcOptions []TagValue) {
 
 	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in calculateImpliedVolatility.")
 		return
 	}
 
@@ -545,7 +545,7 @@ func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volati
 
 func (ic *IbClient) CancelCalculateOptionPrice(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_CALC_IMPLIED_VOLAT {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support calculateImpliedVolatility req.")
 		return
 	}
 
@@ -573,7 +573,7 @@ reqId:TickerId - The ticker id. multipleust be a unique value.
 */
 func (ic *IbClient) ExerciseOptions(reqID int64, contract *Contract, exerciseAction int, exerciseQuantity int, account string, override int) {
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId, multiplier, tradingClass parameter in exerciseOptions.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId, multiplier, tradingClass parameter in exerciseOptions.")
 		return
 	}
 
@@ -633,43 +633,43 @@ Call this function to place an order. The order status will
 func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) {
 	switch v := ic.serverVersion; {
 	case v < MIN_SERVER_VER_DELTA_NEUTRAL && contract.DeltaNeutralContract != nil:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support delta-neutral orders.")
 		return
 	case v < MIN_SERVER_VER_SCALE_ORDERS2 && order.ScaleSubsLevelSize != UNSETINT:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support Subsequent Level Size for Scale orders.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support Subsequent Level Size for Scale orders.")
 		return
 	case v < MIN_SERVER_VER_ALGO_ORDERS && order.AlgoStrategy != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algo orders.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algo orders.")
 		return
 	case v < MIN_SERVER_VER_NOT_HELD && order.NotHeld:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support notHeld parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support notHeld parameter.")
 		return
 	case v < MIN_SERVER_VER_SEC_ID_TYPE && (contract.SecurityType != "" || contract.SecurityID != ""):
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
 		return
 	case v < MIN_SERVER_VER_PLACE_ORDER_CONID && contract.ContractID != UNSETINT && contract.ContractID > 0:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter.")
 		return
 	case v < MIN_SERVER_VER_SSHORTX && order.ExemptCode != -1:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
 		return
 	case v < MIN_SERVER_VER_SSHORTX:
 		for _, comboLeg := range contract.ComboLegs {
 			if comboLeg.ExemptCode != -1 {
-				ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
+				ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support exemptCode parameter.")
 				return
 			}
 		}
 		fallthrough
 	case v < MIN_SERVER_VER_HEDGE_ORDERS && order.HedgeType != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support hedge orders.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support hedge orders.")
 		return
 	case v < MIN_SERVER_VER_OPT_OUT_SMART_ROUTING && order.OptOutSmartRouting:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support optOutSmartRouting parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support optOutSmartRouting parameter.")
 		return
 	case v < MIN_SERVER_VER_DELTA_NEUTRAL_CONID:
 		if order.DeltaNeutralContractID > 0 || order.DeltaNeutralSettlingFirm != "" || order.DeltaNeutralClearingAccount != "" || order.DeltaNeutralClearingIntent != "" {
-			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: ConId, SettlingFirm, ClearingAccount, ClearingIntent.")
+			ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: ConId, SettlingFirm, ClearingAccount, ClearingIntent.")
 			return
 		}
 		fallthrough
@@ -678,7 +678,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 			order.DeltaNeutralShortSale ||
 			order.DeltaNeutralShortSaleSlot > 0 ||
 			order.DeltaNeutralDesignatedLocation != "" {
-			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: OpenClose, ShortSale, ShortSaleSlot, DesignatedLocation.")
+			ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support deltaNeutral parameters: OpenClose, ShortSale, ShortSaleSlot, DesignatedLocation.")
 			return
 		}
 		fallthrough
@@ -691,7 +691,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 				order.ScaleInitPosition != UNSETINT ||
 				order.ScaleInitFillQty != UNSETINT ||
 				order.ScaleRandomPercent) {
-			ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+
+			ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+
 				"  It does not support Scale order parameters: PriceAdjustValue, PriceAdjustInterval, "+
 				"ProfitOffset, AutoReset, InitPosition, InitFillQty and RandomPercent.")
 			return
@@ -700,56 +700,56 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	case v < MIN_SERVER_VER_ORDER_COMBO_LEGS_PRICE && contract.SecurityType == "BAG":
 		for _, orderComboLeg := range order.OrderComboLegs {
 			if orderComboLeg.Price != UNSETFLOAT {
-				ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support per-leg prices for order combo legs.")
+				ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support per-leg prices for order combo legs.")
 				return
 			}
 
 		}
 		fallthrough
 	case v < MIN_SERVER_VER_TRAILING_PERCENT && order.TrailingPercent != UNSETFLOAT:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support trailing percent parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support trailing percent parameter.")
 		return
 	case v < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in placeOrder.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in placeOrder.")
 		return
 	case v < MIN_SERVER_VER_SCALE_TABLE &&
 		(order.ScaleTable != "" ||
 			order.ActiveStartTime != "" ||
 			order.ActiveStopTime != ""):
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support scaleTable, activeStartTime and activeStopTime parameters.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support scaleTable, activeStartTime and activeStopTime parameters.")
 		return
 	case v < MIN_SERVER_VER_ALGO_ID && order.AlgoID != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algoId parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support algoId parameter.")
 		return
 	case v < MIN_SERVER_VER_ORDER_SOLICITED && order.Solictied:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support order solicited parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support order solicited parameter.")
 		return
 	case v < MIN_SERVER_VER_MODELS_SUPPORT && order.ModelCode != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support model code parameter.")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support model code parameter.")
 		return
 	case v < MIN_SERVER_VER_EXT_OPERATOR && order.ExtOperator != "":
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support ext operator parameter")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support ext operator parameter")
 		return
 	case v < MIN_SERVER_VER_SOFT_DOLLAR_TIER &&
 		(order.SoftDollarTier.Name != "" || order.SoftDollarTier.Value != ""):
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support soft dollar tier")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support soft dollar tier")
 		return
 	case v < MIN_SERVER_VER_CASH_QTY && order.CashQty != UNSETFLOAT:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support cash quantity parameter")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support cash quantity parameter")
 		return
 	case v < MIN_SERVER_VER_DECISION_MAKER &&
 		(order.Mifid2DecisionMaker != "" || order.Mifid2DecisionAlgo != ""):
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II decision maker parameters")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II decision maker parameters")
 		return
 	case v < MIN_SERVER_VER_MIFID_EXECUTION &&
 		(order.Mifid2ExecutionTrader != "" || order.Mifid2ExecutionAlgo != ""):
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II execution parameters")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support MIFID II execution parameters")
 		return
 	case v < MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE && order.DontUseAutoPriceForHedge:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support dontUseAutoPriceForHedge parameter")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support dontUseAutoPriceForHedge parameter")
 		return
 	case v < MIN_SERVER_VER_ORDER_CONTAINER && order.IsOmsContainer:
-		ic.wrapper.error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support oms container parameter")
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support oms container parameter")
 		return
 	}
 
@@ -1247,7 +1247,7 @@ func (ic *IbClient) CancelAccountSummary(reqID int64) {
 
 func (ic *IbClient) ReqPositions() {
 	if ic.serverVersion < MIN_SERVER_VER_POSITIONS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
 		return
 	}
 	v := 1
@@ -1258,7 +1258,7 @@ func (ic *IbClient) ReqPositions() {
 
 func (ic *IbClient) CancelPositions() {
 	if ic.serverVersion < MIN_SERVER_VER_POSITIONS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions request.")
 		return
 	}
 
@@ -1270,7 +1270,7 @@ func (ic *IbClient) CancelPositions() {
 
 func (ic *IbClient) ReqPositionsMulti(reqID int64, account string, modelCode string) {
 	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions multi request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support positions multi request.")
 		return
 	}
 	v := 1
@@ -1281,7 +1281,7 @@ func (ic *IbClient) ReqPositionsMulti(reqID int64, account string, modelCode str
 
 func (ic *IbClient) CancelPositionsMulti(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel positions multi request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel positions multi request.")
 		return
 	}
 
@@ -1293,7 +1293,7 @@ func (ic *IbClient) CancelPositionsMulti(reqID int64) {
 
 func (ic *IbClient) ReqAccountUpdatesMulti(reqID int64, account string, modelCode string, ledgerAndNLV bool) {
 	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support account updates multi request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support account updates multi request.")
 		return
 	}
 
@@ -1305,7 +1305,7 @@ func (ic *IbClient) ReqAccountUpdatesMulti(reqID int64, account string, modelCod
 
 func (ic *IbClient) CancelAccountUpdatesMulti(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_MODELS_SUPPORT {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel account updates multi request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support cancel account updates multi request.")
 		return
 	}
 
@@ -1324,7 +1324,7 @@ func (ic *IbClient) CancelAccountUpdatesMulti(reqID int64) {
 
 func (ic *IbClient) ReqPnL(reqID int64, account string, modelCode string) {
 	if ic.serverVersion < MIN_SERVER_VER_PNL {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
 		return
 	}
 
@@ -1335,7 +1335,7 @@ func (ic *IbClient) ReqPnL(reqID int64, account string, modelCode string) {
 
 func (ic *IbClient) CancelPnL(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_PNL {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
 		return
 	}
 
@@ -1346,7 +1346,7 @@ func (ic *IbClient) CancelPnL(reqID int64) {
 
 func (ic *IbClient) ReqPnLSingle(reqID int64, account string, modelCode string, contractID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_PNL {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
 		return
 	}
 
@@ -1357,7 +1357,7 @@ func (ic *IbClient) ReqPnLSingle(reqID int64, account string, modelCode string, 
 
 func (ic *IbClient) CancelPnLSingle(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_PNL {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support PnL request.")
 		return
 	}
 
@@ -1420,17 +1420,17 @@ func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 func (ic *IbClient) ReqContractDetails(reqID int64, contract *Contract) {
 	if ic.serverVersion < MIN_SERVER_VER_SEC_ID_TYPE &&
 		(contract.SecurityIDType != "" || contract.SecurityID != "") {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support secIdType and secId parameters.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqContractDetails.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support tradingClass parameter in reqContractDetails.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_LINKING && contract.PrimaryExchange != "" {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support primaryExchange parameter in reqContractDetails.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support primaryExchange parameter in reqContractDetails.")
 		return
 	}
 
@@ -1484,7 +1484,7 @@ func (ic *IbClient) ReqContractDetails(reqID int64, contract *Contract) {
 
 func (ic *IbClient) ReqMktDepthExchanges() {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_MKT_DEPTH_EXCHANGES {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market depth exchanges request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support market depth exchanges request.")
 		return
 	}
 
@@ -1518,15 +1518,15 @@ func (ic *IbClient) reqMktDepth(reqID int64, contract *Contract, numRows int, is
 	switch {
 	case ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS:
 		if contract.TradingClass != "" || contract.ContractID > 0 {
-			ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameters in reqMktDepth.")
+			ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameters in reqMktDepth.")
 			return
 		}
 		fallthrough
 	case ic.serverVersion < MIN_SERVER_VER_SMART_DEPTH && isSmartDepth:
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support SMART depth request.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support SMART depth request.")
 		return
 	case ic.serverVersion < MIN_SERVER_VER_MKT_DEPTH_PRIM_EXCHANGE && contract.PrimaryExchange != "":
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support primaryExchange parameter in reqMktDepth.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support primaryExchange parameter in reqMktDepth.")
 		return
 	}
 
@@ -1580,7 +1580,7 @@ func (ic *IbClient) reqMktDepth(reqID int64, contract *Contract, numRows int, is
 
 func (ic *IbClient) CancelMktDepth(reqID int64, isSmartDepth bool) {
 	if ic.serverVersion < MIN_SERVER_VER_SMART_DEPTH && isSmartDepth {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support SMART depth cancel.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support SMART depth cancel.")
 		return
 	}
 	v := 1
@@ -1738,7 +1738,7 @@ Requests contracts' historical data. When requesting historical data, a
 func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTime string, duration string, barSize string, whatToShow string, useRTH bool, formatDate int, keepUpToDate bool, chartOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
 		if contract.TradingClass != "" || contract.ContractID > 0 {
-			ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg)
+			ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg)
 		}
 	}
 
@@ -1828,7 +1828,7 @@ func (ic *IbClient) CancelHistoricalData(reqID int64) {
 
 func (ic *IbClient) ReqHeadTimeStamp(reqID int64, contract *Contract, whatToShow string, useRTH bool, formatDate int) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_HEAD_TIMESTAMP {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
 		return
 	}
 
@@ -1862,7 +1862,7 @@ func (ic *IbClient) ReqHeadTimeStamp(reqID int64, contract *Contract, whatToShow
 
 func (ic *IbClient) CancelHeadTimeStamp(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_CANCEL_HEADTIMESTAMP {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support head time stamp requests.")
 		return
 	}
 
@@ -1873,7 +1873,7 @@ func (ic *IbClient) CancelHeadTimeStamp(reqID int64) {
 
 func (ic *IbClient) ReqHistogramData(reqID int64, contract *Contract, useRTH bool, timePeriod string) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTOGRAM {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
 		return
 	}
 
@@ -1904,7 +1904,7 @@ func (ic *IbClient) ReqHistogramData(reqID int64, contract *Contract, useRTH boo
 
 func (ic *IbClient) CancelHistogramData(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTOGRAM {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support histogram requests..")
 		return
 	}
 
@@ -1915,7 +1915,7 @@ func (ic *IbClient) CancelHistogramData(reqID int64) {
 
 func (ic *IbClient) ReqHistoricalTicks(reqID int64, contract *Contract, startDateTime string, endDateTime string, numberOfTicks int, whatToShow string, useRTH bool, ignoreSize bool, miscOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_HISTORICAL_TICKS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical ticks requests..")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical ticks requests..")
 		return
 	}
 
@@ -1974,7 +1974,7 @@ reqId:int - The ticker ID. Must be a unique value.
 */
 func (ic *IbClient) ReqScannerSubscription(reqID int64, subscription *ScannerSubscription, scannerSubscriptionOptions []TagValue, scannerSubscriptionFilterOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_SCANNER_GENERIC_OPTS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support API scanner subscription generic filter options")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support API scanner subscription generic filter options")
 		return
 	}
 
@@ -2070,7 +2070,7 @@ Call the reqRealTimeBars() function to start receiving real time bar
 */
 func (ic *IbClient) ReqRealTimeBars(reqID int64, contract *Contract, barSize int, whatToShow string, useRTH bool, realTimeBarsOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS && contract.TradingClass != "" {
-		ic.wrapper.error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameter in reqRealTimeBars.")
+		ic.wrapper.Error(reqID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId and tradingClass parameter in reqRealTimeBars.")
 		return
 	}
 
@@ -2160,12 +2160,12 @@ Call this function to receive fundamental data for
 func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportType string, fundamentalDataOptions []TagValue) {
 
 	if ic.serverVersion < MIN_SERVER_VER_FUNDAMENTAL_DATA {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
 		return
 	}
 
 	if ic.serverVersion < MIN_SERVER_VER_TRADING_CLASS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter in reqFundamentalData.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support conId parameter in reqFundamentalData.")
 		return
 	}
 
@@ -2205,7 +2205,7 @@ func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportTy
 
 func (ic *IbClient) CancelFundamentalData(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_FUNDAMENTAL_DATA {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support fundamental data request.")
 		return
 	}
 
@@ -2225,7 +2225,7 @@ func (ic *IbClient) CancelFundamentalData(reqID int64) {
 
 func (ic *IbClient) ReqNewsProviders() {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_NEWS_PROVIDERS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support news providers request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support news providers request.")
 		return
 	}
 
@@ -2236,7 +2236,7 @@ func (ic *IbClient) ReqNewsProviders() {
 
 func (ic *IbClient) ReqNewsArticle(reqID int64, providerCode string, articleID string, newsArticleOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_NEWS_ARTICLE {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support news article request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support news article request.")
 		return
 	}
 
@@ -2265,7 +2265,7 @@ func (ic *IbClient) ReqNewsArticle(reqID int64, providerCode string, articleID s
 
 func (ic *IbClient) ReqHistoricalNews(reqID int64, contractID int64, providerCode string, startDateTime string, endDateTime string, totalResults int64, historicalNewsOptions []TagValue) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_HISTORICAL_NEWS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical news request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support historical news request.")
 		return
 	}
 
@@ -2303,7 +2303,7 @@ func (ic *IbClient) ReqHistoricalNews(reqID int64, contractID int64, providerCod
 
 func (ic *IbClient) QueryDisplayGroups(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support queryDisplayGroups request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support queryDisplayGroups request.")
 		return
 	}
 
@@ -2320,7 +2320,7 @@ reqId:int - The unique number associated with the notification.
 */
 func (ic *IbClient) SubscribeToGroupEvents(reqID int64, groupID int) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support subscribeToGroupEvents request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support subscribeToGroupEvents request.")
 		return
 	}
 
@@ -2342,7 +2342,7 @@ reqId:int - The requestId specified in subscribeToGroupEvents().
 */
 func (ic *IbClient) UpdateDisplayGroup(reqID int64, contractInfo string) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support updateDisplayGroup request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support updateDisplayGroup request.")
 		return
 	}
 
@@ -2354,7 +2354,7 @@ func (ic *IbClient) UpdateDisplayGroup(reqID int64, contractInfo string) {
 
 func (ic *IbClient) UnsubscribeFromGroupEvents(reqID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support unsubscribeFromGroupEvents request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support unsubscribeFromGroupEvents request.")
 		return
 	}
 
@@ -2370,12 +2370,12 @@ For IB's internal purpose. Allows to provide means of verification
 */
 func (ic *IbClient) VerifyRequest(apiName string, apiVersion string) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
 		return
 	}
 
 	if ic.extraAuth {
-		ic.wrapper.error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
+		ic.wrapper.Error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
 			"  Intent to authenticate needs to be expressed during initial connect request.")
 		return
 	}
@@ -2392,7 +2392,7 @@ For IB's internal purpose. Allows to provide means of verification
 */
 func (ic *IbClient) VerifyMessage(apiData string) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
 		return
 	}
 
@@ -2408,12 +2408,12 @@ For IB's internal purpose. Allows to provide means of verification
 */
 func (ic *IbClient) VerifyAndAuthRequest(apiName string, apiVersion string, opaqueIsvKey string) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
 		return
 	}
 
 	if ic.extraAuth {
-		ic.wrapper.error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
+		ic.wrapper.Error(NO_VALID_ID, BAD_MESSAGE.code, BAD_MESSAGE.msg+
 			"  Intent to authenticate needs to be expressed during initial connect request.")
 		return
 	}
@@ -2430,7 +2430,7 @@ For IB's internal purpose. Allows to provide means of verification
 */
 func (ic *IbClient) VerifyAndAuthMessage(apiData string, xyzResponse string) {
 	if ic.serverVersion < MIN_SERVER_VER_LINKING {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support verification request.")
 		return
 	}
 
@@ -2451,7 +2451,7 @@ Requests security definition option parameters for viewing a
 */
 func (ic *IbClient) ReqSecDefOptParams(reqID int64, underlyingSymbol string, futFopExchange string, underlyingSecurityType string, underlyingContractID int64) {
 	if ic.serverVersion < MIN_SERVER_VER_SEC_DEF_OPT_PARAMS_REQ {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support security definition option request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support security definition option request.")
 		return
 	}
 
@@ -2473,7 +2473,7 @@ func (ic *IbClient) ReqSoftDollarTiers(reqID int64) {
 
 func (ic *IbClient) ReqFamilyCodes() {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_FAMILY_CODES {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support family codes request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support family codes request.")
 		return
 	}
 
@@ -2484,7 +2484,7 @@ func (ic *IbClient) ReqFamilyCodes() {
 
 func (ic *IbClient) ReqMatchingSymbols(reqID int64, pattern string) {
 	if ic.serverVersion < MIN_SERVER_VER_REQ_MATCHING_SYMBOLS {
-		ic.wrapper.error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support matching symbols request.")
+		ic.wrapper.Error(NO_VALID_ID, UPDATE_TWS.code, UPDATE_TWS.msg+"  It does not support matching symbols request.")
 		return
 	}
 
@@ -2512,7 +2512,7 @@ requestLoop:
 		select {
 		case req := <-ic.reqChan:
 			if !ic.IsConnected() {
-				ic.wrapper.error(NO_VALID_ID, NOT_CONNECTED.code, NOT_CONNECTED.msg)
+				ic.wrapper.Error(NO_VALID_ID, NOT_CONNECTED.code, NOT_CONNECTED.msg)
 				break
 			}
 

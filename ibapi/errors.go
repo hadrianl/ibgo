@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 type IbError struct {
 	code int64

@@ -2,7 +2,7 @@
 ordercondition contains several OrderCondition, such as Price, Time, Margin, Execution, Volume, PercentChange
 */
 
-package ibgo
+package ibapi
 
 import (
 	log "github.com/sirupsen/logrus"

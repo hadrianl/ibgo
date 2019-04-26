@@ -1,6 +1,6 @@
 /* connection handle the */
 
-package ibgo
+package ibapi
 
 import (
 	"net"

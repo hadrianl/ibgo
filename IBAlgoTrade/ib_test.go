@@ -1,15 +1,17 @@
-package ibgo
+package IBAlgoTrade_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/hadrianl/ibgo/IBAlgoTrade"
 	log "github.com/sirupsen/logrus"
+	// "github.com/hadrianl/ibgo/ibapi"
 )
 
 func TestIB(t *testing.T) {
 	log.SetLevel(log.InfoLevel)
-	ib := NewIB("127.0.0.1", 7497, 0)
+	ib := IBAlgoTrade.NewIB("127.0.0.1", 7497, 0)
 	if err := ib.Connect(); err != nil {
 		log.Panicf("Connect failed: %v", err)
 	}
@@ -18,13 +20,4 @@ func TestIB(t *testing.T) {
 	if err := ib.DisConnect(); err != nil {
 		log.Panicf("DisConnect failed: %v", err)
 	}
-	// time.Sleep(time.Second * 10)
-	// if err := ib.Connect(); err != nil {
-	// 	log.Panicf("Connect failed: %v", err)
-	// }
-	// ib.DoSomeTest()
-	// time.Sleep(time.Second * 10)
-	// if err := ib.DisConnect(); err != nil {
-	// 	log.Panicf("DisConnect failed: %v", err)
-	// }
 }

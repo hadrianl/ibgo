@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 import "fmt"
 

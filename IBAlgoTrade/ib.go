@@ -1,13 +1,19 @@
-package ibgo
+package IBAlgoTrade
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+
+	"github.com/hadrianl/ibgo/ibapi"
+)
 
 type IB struct {
-	Client   *IbClient
-	Wrapper  Wrapper
+	Client   *ibapi.IbClient
+	Wrapper  ibapi.IbWrapper
 	host     string
 	port     int
 	clientID int64
+	reqID    int64
 }
 
 func NewIB(host string, port int, clientID int64) *IB {
@@ -16,10 +22,10 @@ func NewIB(host string, port int, clientID int64) *IB {
 		port:     port,
 		clientID: clientID,
 	}
-	ibwrapper := Wrapper{}
-	ibclient := NewIbClient(ibwrapper)
+	wrapper := GoWrapper{ib: ib}
+	ibclient := ibapi.NewIbClient(wrapper)
 	ib.Client = ibclient
-	ib.Wrapper = ibwrapper
+	ib.Wrapper = wrapper
 
 	return ib
 }
@@ -44,6 +50,10 @@ func (ib *IB) DisConnect() error {
 	return err
 }
 
+func (ib *IB) GetReqID() int64 {
+	return atomic.AddInt64(&ib.reqID, 1)
+}
+
 func (ib *IB) DoSomeTest() {
 	// hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
@@ -65,3 +75,5 @@ func (ib *IB) DoSomeTest() {
 	ib.Client.ReqPnL(1, "DU1382837", "")
 	// ib.Client.PlaceOrder(2271, &hsij9, order)
 }
+
+func (ib *IB) ReqAccountSummary(groupName string, tags string)

@@ -1,4 +1,4 @@
-package ibgo
+package ibapi
 
 // Execution is the information of trade detail
 type Execution struct {
