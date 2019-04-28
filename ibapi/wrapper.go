@@ -21,7 +21,7 @@ type IbWrapper interface {
 	ExecDetails(reqID int64, contract *Contract, execution *Execution)
 	UpdateMktDepth(reqID int64, position int64, operation int64, side int64, price float64, size int64)
 	UpdateMktDepthL2(reqID int64, position int64, marketMaker string, operation int64, side int64, price float64, size int64, isSmartDepth bool)
-	UpdateNewsBulletin(msgID int64, msgType int64, newsMessage string, originExch string)
+	UpdateNewsBulletin(msgID int64, msgType int64, newsMessage string, originExchange string)
 	ManagedAccounts(accountsList []string)
 	ReceiveFA(faData int64, cxml string)
 	HistoricalData(reqID int64, bar *BarData)

@@ -1,6 +1,7 @@
 package IBAlgoTrade
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 
 type IB struct {
 	Client   *ibapi.IbClient
-	Wrapper  ibapi.IbWrapper
+	Wrapper  GoWrapper
 	host     string
 	port     int
 	clientID int64
@@ -72,8 +73,27 @@ func (ib *IB) DoSomeTest() {
 	// order.OrderType = "LMT"
 	// order.TotalQuantity = 1
 	time.Sleep(time.Second * 3)
-	ib.Client.ReqPnL(1, "DU1382837", "")
+	// ib.Client.ReqPnL(1, "DU1382837", "")
 	// ib.Client.PlaceOrder(2271, &hsij9, order)
+	ib.ReqAccountSummary("", "")
 }
 
-func (ib *IB) ReqAccountSummary(groupName string, tags string)
+func (ib *IB) ReqAccountSummary(groupName string, tags string) {
+	reqID := ib.GetReqID()
+	ib.Wrapper.dataChanMap[reqID] = make(chan map[string]string, 5)
+	ib.Client.ReqAccountSummary(reqID, groupName, tags)
+
+	go func() {
+		defer delete(ib.Wrapper.dataChanMap, reqID)
+		for {
+			select {
+			case v, ok := <-ib.Wrapper.dataChanMap[reqID]:
+				if ok {
+					fmt.Println(v)
+				} else {
+					break
+				}
+			}
+		}
+	}()
+}

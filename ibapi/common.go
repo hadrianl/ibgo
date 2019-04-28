@@ -21,7 +21,7 @@ type TagValue struct {
 }
 
 type OrderComboLeg struct {
-	Price float64
+	Price float64 `default:"UNSETFLOAT"`
 }
 
 // ------------ComboLeg--------------------
@@ -47,7 +47,7 @@ type ComboLeg struct {
 	// for stock legs when doing short sale
 	ShortSaleSlot      int64
 	DesignatedLocation string
-	ExemptCode         int64
+	ExemptCode         int64 `default:"-1"`
 }
 
 // -----------------------------------------------------
@@ -114,7 +114,7 @@ type DepthMktDataDescription struct {
 	SecurityType    string
 	ListingExchange string
 	ServiceDataType string
-	AggGroup        int64 //default: UNSETINT
+	AggGroup        int64 `default:"UNSETINT"`
 }
 
 type NewsProvider struct {

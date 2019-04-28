@@ -122,7 +122,7 @@ func (ic *IbClient) startAPI() error {
 		startAPI = makeMsgBuf(int64(START_API), int64(v), ic.clientID)
 	}
 
-	log.Println("Start API:", startAPI)
+	log.Debug("Start API:", startAPI)
 	if _, err := ic.writer.Write(startAPI); err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	log.Debug("Recv ServerInfo...")
+	log.Debug("Recv ServerInitInfo...")
 	if msgBuf, err := readMsgBuf(ic.reader); err != nil {
 		return err
 	} else {

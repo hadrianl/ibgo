@@ -21,15 +21,15 @@ type Order struct {
 	Action                        string
 	TotalQuantity                 float64
 	OrderType                     string
-	LimitPrice                    float64
-	AuxPrice                      float64
+	LimitPrice                    float64 `default:"UNSETFLOAT"`
+	AuxPrice                      float64 `default:"UNSETFLOAT"`
 	TIF                           string
 	ActiveStartTime               string
 	ActiveStopTime                string
 	OCAGroup                      string
 	OCAType                       int64 // 1 = CANCEL_WITH_BLOCK, 2 = REDUCE_WITH_BLOCK, 3 = REDUCE_NON_BLOCK
 	OrderRef                      string
-	Transmit                      bool
+	Transmit                      bool `default:"true"`
 	ParentID                      int64
 	BlockOrder                    bool
 	SweepToFill                   bool
@@ -42,10 +42,10 @@ type Order struct {
 	OverridePercentageConstraints bool
 	Rule80A                       string // Individual = 'I', Agency = 'A', AgentOtherMember = 'W', IndividualPTIA = 'J', AgencyPTIA = 'U', AgentOtherMemberPTIA = 'M', IndividualPT = 'K', AgencyPT = 'Y', AgentOtherMemberPT = 'N'
 	AllOrNone                     bool
-	MinQty                        int64
-	PercentOffset                 float64
-	TrailStopPrice                float64
-	TrailingPercent               float64
+	MinQty                        int64   `default:"UNSETINT"`
+	PercentOffset                 float64 `default:"UNSETFLOAT"`
+	TrailStopPrice                float64 `default:"UNSETFLOAT"`
+	TrailingPercent               float64 `default:"UNSETFLOAT"`
 	//---- financial advisors only -----
 	FAGroup      string
 	FAProfile    string
@@ -61,29 +61,29 @@ type Order struct {
 	// ---------------------------------
 	// ------- SMART routing only ------
 	DiscretionaryAmount float64
-	ETradeOnly          bool
-	FirmQuoteOnly       bool
-	NBBOPriceCap        float64
+	ETradeOnly          bool    `default:"true"`
+	FirmQuoteOnly       bool    `default:"true"`
+	NBBOPriceCap        float64 `default:"UNSETFLOAT"`
 	OptOutSmartRouting  bool
 	// --------------------------------
 	// ---BOX exchange orders only ----
 	AuctionStrategy int64
-	StartingPrice   float64
-	StockRefPrice   float64
-	Delta           float64
+	StartingPrice   float64 `default:"UNSETFLOAT"`
+	StockRefPrice   float64 `default:"UNSETFLOAT"`
+	Delta           float64 `default:"UNSETFLOAT"`
 	// --------------------------------
 	// --pegged to stock and VOL orders only--
-	StockRangeLower float64
-	StockRangeUpper float64
+	StockRangeLower float64 `default:"UNSETFLOAT"`
+	StockRangeUpper float64 `default:"UNSETFLOAT"`
 
 	RandomizePrice bool
 	RandomizeSize  bool
 
 	// ---VOLATILITY ORDERS ONLY--------
-	Volatility                     float64
-	VolatilityType                 int64
+	Volatility                     float64 `default:"UNSETFLOAT"`
+	VolatilityType                 int64   `default:"UNSETINT"`
 	DeltaNeutralOrderType          string
-	DeltaNeutralAuxPrice           float64
+	DeltaNeutralAuxPrice           float64 `default:"UNSETFLOAT"`
 	DeltaNeutralContractID         int64
 	DeltaNeutralSettlingFirm       string
 	DeltaNeutralClearingAccount    string
@@ -93,23 +93,23 @@ type Order struct {
 	DeltaNeutralShortSaleSlot      int64
 	DeltaNeutralDesignatedLocation string
 	ContinuousUpdate               bool
-	ReferencePriceType             int64 // 1=Average, 2 = BidOrAsk
+	ReferencePriceType             int64 `default:"UNSETINT"` // 1=Average, 2 = BidOrAsk
 	// DeltaNeutral                  DeltaNeutralData `when:"DeltaNeutralOrderType" cond:"is" value:""`
 	// -------------------------------------
 	// ------COMBO ORDERS ONLY-----------
-	BasisPoints     float64 // EFP orders only
-	BasisPointsType int64   // EFP orders only
+	BasisPoints     float64 `default:"UNSETFLOAT"` // EFP orders only
+	BasisPointsType int64   `default:"UNSETINT"`   // EFP orders only
 	// -----------------------------------
 	//-----------SCALE ORDERS ONLY------------
-	ScaleInitLevelSize        int64
-	ScaleSubsLevelSize        int64
-	ScalePriceIncrement       float64
-	ScalePriceAdjustValue     float64
-	ScalePriceAdjustInterval  int64
-	ScaleProfitOffset         float64
+	ScaleInitLevelSize        int64   `default:"UNSETINT"`
+	ScaleSubsLevelSize        int64   `default:"UNSETINT"`
+	ScalePriceIncrement       float64 `default:"UNSETFLOAT"`
+	ScalePriceAdjustValue     float64 `default:"UNSETFLOAT"`
+	ScalePriceAdjustInterval  int64   `default:"UNSETINT"`
+	ScaleProfitOffset         float64 `default:"UNSETFLOAT"`
 	ScaleAutoReset            bool
-	ScaleInitPosition         int64
-	ScaleInitFillQty          int64
+	ScaleInitPosition         int64 `default:"UNSETINT"`
+	ScaleInitFillQty          int64 `default:"UNSETINT"`
 	ScaleRandomPercent        bool
 	ScaleTable                string
 	NotSuppScaleNumComponents int64
@@ -154,12 +154,12 @@ type Order struct {
 	ReferenceChangeAmount        float64
 	ReferenceExchangeID          string
 	AdjustedOrderType            string
-	TriggerPrice                 float64
-	AdjustedStopPrice            float64
-	AdjustedStopLimitPrice       float64
-	AdjustedTrailingAmount       float64
+	TriggerPrice                 float64 `default:"UNSETFLOAT"`
+	AdjustedStopPrice            float64 `default:"UNSETFLOAT"`
+	AdjustedStopLimitPrice       float64 `default:"UNSETFLOAT"`
+	AdjustedTrailingAmount       float64 `default:"UNSETFLOAT"`
 	AdjustableTrailingUnit       int64
-	LimitPriceOffset             float64
+	LimitPriceOffset             float64 `default:"UNSETFLOAT"`
 
 	Conditions            []OrderConditioner
 	ConditionsCancelOrder bool
@@ -169,7 +169,7 @@ type Order struct {
 	ExtOperator string
 
 	//-----native cash quantity --------
-	CashQty float64
+	CashQty float64 `default:"UNSETFLOAT"`
 
 	//--------------------------------
 	Mifid2DecisionMaker   string
@@ -185,6 +185,18 @@ type Order struct {
 	DiscretionaryUpToLimitPrice bool
 
 	SoftDollarTier SoftDollarTier
+
+	/*
+			    autoCancelDate='',
+		        filledQuantity=UNSET_DOUBLE,
+		        refFuturesConId=0,
+		        autoCancelParent=False,
+		        shareholder='',
+		        imbalanceOnly=False,
+		        routeMarketableToBbo=False,
+		        parentPermId=0,
+		        usePriceMgmtAlgo=False
+	*/
 }
 
 // OrderState is the state of Order
@@ -199,9 +211,9 @@ type OrderState struct {
 	EquityWithLoanBefore    string
 	EquityWithLoanChange    string
 	EquityWithLoanAfter     string
-	Commission              float64 // max
-	MinCommission           float64 // max
-	MaxCommission           float64 // max
+	Commission              float64 `default:"UNSETFLOAT"`
+	MinCommission           float64 `default:"UNSETFLOAT"`
+	MaxCommission           float64 `default:"UNSETFLOAT"`
 	CommissionCurrency      string
 	WarningText             string
 }

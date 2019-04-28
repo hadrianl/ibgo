@@ -14,21 +14,21 @@ type ScannerSubscription struct {
 	Instrument               string
 	LocationCode             string
 	ScanCode                 string
-	AbovePrice               float64
-	BelowPrice               float64
-	AboveVolume              int64
-	MarketCapAbove           float64
-	MarketCapBelow           float64
+	AbovePrice               float64 `default:"UNSETFLOAT"`
+	BelowPrice               float64 `default:"UNSETFLOAT"`
+	AboveVolume              int64   `default:"UNSETINT"`
+	MarketCapAbove           float64 `default:"UNSETFLOAT"`
+	MarketCapBelow           float64 `default:"UNSETFLOAT"`
 	MoodyRatingAbove         string
 	MoodyRatingBelow         string
 	SpRatingAbove            string
 	SpRatingBelow            string
 	MaturityDateAbove        string
 	MaturityDateBelow        string
-	CouponRateAbove          float64
-	CouponRateBelow          float64
+	CouponRateAbove          float64 `default:"UNSETFLOAT"`
+	CouponRateBelow          float64 `default:"UNSETFLOAT"`
 	ExcludeConvertible       bool
-	AverageOptionVolumeAbove int64
+	AverageOptionVolumeAbove int64 `default:"UNSETINT"`
 	ScannerSettingPairs      string
 	StockTypeFilter          string
 }
