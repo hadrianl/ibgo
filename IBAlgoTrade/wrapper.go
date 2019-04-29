@@ -15,7 +15,21 @@ type GoWrapper struct {
 	mu          sync.Mutex
 	dataChanMap map[int64]chan interface{}
 
-	accountSummary map[string][]map[string][]string
+	accountValues  map[string]*AccountValues
+	accountSummary map[string]*AccountSummary
+	portfolio      map[string]map[int64]PortfolioItem
+}
+
+func (w *GoWrapper) reset() {
+	w.dataChanMap = make(map[int64]chan interface{})
+	w.accountValues = make(map[string]*AccountValues)
+	w.accountSummary = make(map[string]*AccountSummary)
+	w.accountSummary["All"] = &AccountSummary{Account: "All", TagValues: make(map[string][2]string)}
+	w.portfolio = make(map[string]map[int64]PortfolioItem)
+}
+
+func (w GoWrapper) GetAccountSummary(account string) AccountSummary {
+	return *w.accountSummary[account]
 }
 
 func (w GoWrapper) ConnectAck() {
@@ -29,6 +43,19 @@ func (w GoWrapper) NextValidID(reqID int64) {
 
 func (w GoWrapper) ManagedAccounts(accountsList []string) {
 	log.Printf("<managedAccounts>: %v.", accountsList)
+	for _, acc := range accountsList {
+		if _, ok := w.accountSummary[acc]; !ok {
+			w.accountSummary[acc] = &AccountSummary{Account: acc, TagValues: make(map[string][2]string)}
+		}
+
+		if _, ok := w.accountValues[acc]; !ok {
+			w.accountValues[acc] = &AccountValues{Account: acc, TagValues: make(map[string][3]string)}
+		}
+
+		if _, ok := w.portfolio[acc]; !ok {
+			w.portfolio[acc] = make(map[int64]PortfolioItem)
+		}
+	}
 
 }
 
@@ -43,7 +70,7 @@ func (w GoWrapper) UpdateAccountTime(accTime time.Time) {
 
 func (w GoWrapper) UpdateAccountValue(tag string, value string, currency string, account string) {
 	log.WithFields(log.Fields{"account": account, tag: value, "currency": currency}).Print("<updateAccountValue>")
-
+	w.accountValues[account].TagValues[tag] = [3]string{value, currency, ""}
 }
 
 func (w GoWrapper) AccountDownloadEnd(accName string) {
@@ -52,6 +79,7 @@ func (w GoWrapper) AccountDownloadEnd(accName string) {
 
 func (w GoWrapper) AccountUpdateMulti(reqID int64, account string, modelCode string, tag string, value string, currency string) {
 	log.WithFields(log.Fields{"reqID": reqID, "account": account, tag: value, "currency": currency, "modelCode": modelCode}).Print("<accountUpdateMulti>")
+	w.accountValues[account].TagValues[tag] = [3]string{value, currency, modelCode}
 }
 
 func (w GoWrapper) AccountUpdateMultiEnd(reqID int64) {
@@ -60,18 +88,19 @@ func (w GoWrapper) AccountUpdateMultiEnd(reqID int64) {
 
 func (w GoWrapper) AccountSummary(reqID int64, account string, tag string, value string, currency string) {
 	log.WithFields(log.Fields{"reqID": reqID, "account": account, tag: value, "currency": currency}).Print("<accountSummary>")
-	c := w.dataChanMap[reqID]
-	if c != nil {
-		c <- map[string]string{"account": account, "tag": tag, "value": value, "currency": currency}
-	}
+	w.accountSummary[account].TagValues[tag] = [2]string{value, currency}
+	// c := w.dataChanMap[reqID]
+	// if c != nil {
+	// 	c <- map[string]string{"account": account, "tag": tag, "value": value, "currency": currency}
+	// }
 }
 
 func (w GoWrapper) AccountSummaryEnd(reqID int64) {
 	log.WithField("reqID", reqID).Print("<accountSummaryEnd>")
-	c := w.dataChanMap[reqID]
-	if c != nil {
-		close(c)
-	}
+	// c := w.dataChanMap[reqID]
+	// if c != nil {
+	// 	close(c)
+	// }
 }
 
 func (w GoWrapper) VerifyMessageAPI(apiData string) {
@@ -106,8 +135,21 @@ func (w GoWrapper) PositionMultiEnd(reqID int64) {
 	log.WithField("reqID", reqID).Print("<positionMultiEnd>")
 }
 
-func (w GoWrapper) UpdatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, accName string) {
+func (w GoWrapper) UpdatePortfolio(contract *Contract, position float64, marketPrice float64, marketValue float64, averageCost float64, unrealizedPNL float64, realizedPNL float64, account string) {
 	log.Printf("<updatePortfolio>: contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract.LocalSymbol, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
+	portfolioItem := PortfolioItem{*contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, account}
+	conID := contract.ContractID
+	portfolioItemMap := w.portfolio[account]
+	if _, ok := portfolioItemMap[conID]; ok {
+		if position != 0 {
+			portfolioItemMap[conID] = portfolioItem
+		} else {
+			delete(portfolioItemMap, conID)
+		}
+	} else {
+		portfolioItemMap[conID] = portfolioItem
+	}
+
 }
 
 func (w GoWrapper) Position(account string, contract *Contract, position float64, avgCost float64) {

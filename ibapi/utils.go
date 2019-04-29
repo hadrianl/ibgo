@@ -272,7 +272,7 @@ func handleEmpty(d interface{}) string {
 	}
 }
 
-//Default try to init the object with the default tag
+//Default try to init the object with the default tag, that is a common way but not a efficent way
 func InitDefault(o interface{}) {
 	t := reflect.TypeOf(o).Elem()
 	v := reflect.ValueOf(o).Elem()
@@ -282,10 +282,10 @@ func InitDefault(o interface{}) {
 	for i := 0; i < fieldCount; i++ {
 		field := t.Field(i)
 
-		// if v.Field(i).Kind() == reflect.Struct {
-		// 	Create(v.Field(i).Interface())
-		// 	fmt.Println(v.Field(i))
-		// }
+		if v.Field(i).Kind() == reflect.Struct {
+			InitDefault(v.Field(i).Addr().Interface())
+			continue
+		}
 
 		if defaultValue, ok := field.Tag.Lookup("default"); ok {
 
@@ -302,8 +302,6 @@ func InitDefault(o interface{}) {
 				panic("Unknown defaultValue:")
 			}
 		}
-		// fmt.Printf("value:***%v***", field.Tag)
-		// fmt.Printf("type:***%v***", field.Type)
 
 	}
 }

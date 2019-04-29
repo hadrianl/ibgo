@@ -1,6 +1,7 @@
 package IBAlgoTrade_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ func TestIB(t *testing.T) {
 		log.Panicf("Connect failed: %v", err)
 	}
 	ib.DoSomeTest()
+	fmt.Println(ib.Wrapper.GetAccountSummary("All"))
 	time.Sleep(time.Second * 20)
 	if err := ib.DisConnect(); err != nil {
 		log.Panicf("DisConnect failed: %v", err)

@@ -16,13 +16,13 @@ const (
 	// ActiveStates  = [4]string{"PendingSubmit", "ApiPending", "PreSubmitted", "Submitted"}
 )
 
-// type Trade struct {
-// 	Contract   ibapi.Contract
-// 	Order      ibapi.Order
-// 	OrderState OrderStatus
-// 	Fills      []Fill
-// 	Log        []TradeLogEntry
-// }
+type Trade struct {
+	Contract   ibapi.Contract
+	Order      ibapi.Order
+	OrderState OrderStatus
+	Fills      []Fill
+	Log        []TradeLogEntry
+}
 
 type OrderStatus struct {
 	OrderID           int64
@@ -39,7 +39,7 @@ type OrderStatus struct {
 	LastLiquidity     int64
 }
 
-func Order() *ibapi.Order {
+func NewOrder() *ibapi.Order {
 	var order *ibapi.Order
 	ibapi.InitDefault(order)
 

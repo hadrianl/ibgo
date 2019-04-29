@@ -1,13 +1,14 @@
 package IBAlgoTrade
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/hadrianl/ibgo/ibapi"
 )
 
-//Default try to init the object with the default tag
-func Default(o interface{}) {
+//InitDefault try to init the object with the default tag
+func Create(o interface{}) {
 	t := reflect.TypeOf(o).Elem()
 	v := reflect.ValueOf(o).Elem()
 
@@ -16,10 +17,10 @@ func Default(o interface{}) {
 	for i := 0; i < fieldCount; i++ {
 		field := t.Field(i)
 
-		// if v.Field(i).Kind() == reflect.Struct {
-		// 	Create(v.Field(i).Interface())
-		// 	fmt.Println(v.Field(i))
-		// }
+		if v.Field(i).Kind() == reflect.Struct {
+			Create(v.Field(i).Addr().Interface())
+			fmt.Println(v.Field(i).Addr().Interface())
+		}
 
 		if defaultValue, ok := field.Tag.Lookup("default"); ok {
 

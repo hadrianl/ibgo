@@ -4,6 +4,6 @@ import (
 	"github.com/hadrianl/ibgo/ibapi"
 )
 
-func Contract() *ibapi.Contract {
+func NewContract() *ibapi.Contract {
 	return &ibapi.Contract{}
 }

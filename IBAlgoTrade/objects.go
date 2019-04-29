@@ -1,5 +1,11 @@
 package IBAlgoTrade
 
+import (
+	"time"
+
+	"github.com/hadrianl/ibgo/ibapi"
+)
+
 // func ContractDetails(Contract ibapi.Contract) *ibapi.ContractDetails {
 // 	return &ContractDetails{Contract: *Contract()}
 // }
@@ -241,11 +247,11 @@ package IBAlgoTrade
 // 	StopLoss   ibapi.Order
 // }
 
-// type TradeLogEntry struct {
-// 	Time    time.Time
-// 	status  string
-// 	message string
-// }
+type TradeLogEntry struct {
+	Time    time.Time
+	status  string
+	message string
+}
 
 // type PriceIncrement struct {
 // 	ibapi.PriceIncrement
@@ -260,16 +266,16 @@ package IBAlgoTrade
 // 	Legs            string
 // }
 
-// type PortfolioItem struct {
-// 	Contract      Contract
-// 	Position      int64
-// 	MarketPrice   float64
-// 	MarketValue   string
-// 	AverageCost   float64
-// 	UnrealizedPNL float64
-// 	RealizedPNL   float64
-// 	Account       string
-// }
+type PortfolioItem struct {
+	Contract      ibapi.Contract
+	Position      float64
+	MarketPrice   float64
+	MarketValue   float64
+	AverageCost   float64
+	UnrealizedPNL float64
+	RealizedPNL   float64
+	Account       string
+}
 
 // type Position struct {
 // 	Account     string
@@ -278,12 +284,12 @@ package IBAlgoTrade
 // 	AverageCost float64
 // }
 
-// type Fill struct {
-// 	Time             time.Time
-// 	Contract         ibapi.Contract
-// 	Execution        ibapi.Execution
-// 	CommissionReport ibapi.CommissionReport
-// }
+type Fill struct {
+	Time             time.Time
+	Contract         ibapi.Contract
+	Execution        ibapi.Execution
+	CommissionReport ibapi.CommissionReport
+}
 
 // type OptionComputation struct {
 // 	ImpliedVol      float64
@@ -355,3 +361,17 @@ package IBAlgoTrade
 // 	NumMsgRecv   int64
 // 	NumMsgSend   int64
 // }
+
+type AccountValues struct {
+	TagValues map[string][3]string
+	Account   string
+	// Currency  string
+	// ModelCode string
+}
+
+type AccountSummary struct {
+	TagValues map[string][2]string
+	Account   string
+	// Currency  string
+	// ModelCode string
+}

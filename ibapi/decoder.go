@@ -1388,24 +1388,25 @@ func (d *ibDecoder) processPositionDataMsg(f [][]byte) {
 	c.Strike = decodeFloat(f[6])
 	c.Right = decodeString(f[7])
 	c.Multiplier = decodeString(f[8])
-	c.Currency = decodeString(f[9])
-	c.LocalSymbol = decodeString(f[10])
+	c.Exchange = decodeString(f[9])
+	c.Currency = decodeString(f[10])
+	c.LocalSymbol = decodeString(f[11])
 
 	if v >= 2 {
-		c.TradingClass = decodeString(f[11])
+		c.TradingClass = decodeString(f[12])
 		f = f[1:]
 	}
 
 	var p float64
 	if d.version >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
-		p = decodeFloat(f[11])
+		p = decodeFloat(f[12])
 	} else {
-		p = float64(decodeInt(f[11]))
+		p = float64(decodeInt(f[12]))
 	}
 
 	var avgCost float64
 	if v >= 3 {
-		avgCost = decodeFloat(f[12])
+		avgCost = decodeFloat(f[13])
 	}
 
 	d.wrapper.Position(acc, c, p, avgCost)

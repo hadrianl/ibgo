@@ -1,7 +1,7 @@
 package IBAlgoTrade
 
 import (
-	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +24,7 @@ func NewIB(host string, port int, clientID int64) *IB {
 		clientID: clientID,
 	}
 	wrapper := GoWrapper{ib: ib}
+	wrapper.reset()
 	ibclient := ibapi.NewIbClient(wrapper)
 	ib.Client = ibclient
 	ib.Wrapper = wrapper
@@ -56,12 +57,26 @@ func (ib *IB) GetReqID() int64 {
 }
 
 func (ib *IB) DoSomeTest() {
-	// hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", nil, nil}
+	// hsik9 := ibapi.Contract{359142357, "HSI", "FUT", "20190530", 0, "?", "50", "HKFE", "HKD", "HSIK9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
 	// ib.Client.ReqCurrentTime()
 	// ib.Client.ReqAutoOpenOrders(true)
 	// ib.Client.ReqAccountUpdates(true, "")
+	// ib.Client.ReqPositions()
 
+	tags := []string{"AccountType,NetLiquidation,TotalCashValue,SettledCash,",
+		"AccruedCash,BuyingPower,EquityWithLoanValue,",
+		"PreviousEquityWithLoanValue,GrossPositionValue,ReqTEquity,",
+		"ReqTMargin,SMA,InitMarginReq,MaintMarginReq,AvailableFunds,",
+		"ExcessLiquidity,Cushion,FullInitMarginReq,FullMaintMarginReq,",
+		"FullAvailableFunds,FullExcessLiquidity,LookAheadNextChange,",
+		"LookAheadInitMarginReq,LookAheadMaintMarginReq,",
+		"LookAheadAvailableFunds,LookAheadExcessLiquidity,",
+		"HighestSeverity,DayTradesRemaining,Leverage,$LEDGER:ALL"}
+	ib.Client.ReqAccountSummary(ib.GetReqID(), "All", strings.Join(tags, ""))
+	// ib.Client.ReqOpenOrders()
+	// ib.Client.ReqContractDetails(ib.GetReqID(), &hsik9)
+	// ib.Client.ReqRealTimeBars(ib.GetReqID(), &hsik9, 5, "TRADES", false, nil)
 	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, []TagValue{})
 	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
 	// ef := ExecutionFilter{}
@@ -75,25 +90,25 @@ func (ib *IB) DoSomeTest() {
 	time.Sleep(time.Second * 3)
 	// ib.Client.ReqPnL(1, "DU1382837", "")
 	// ib.Client.PlaceOrder(2271, &hsij9, order)
-	ib.ReqAccountSummary("", "")
+	// ib.ReqAccountSummary("", "")
 }
 
-func (ib *IB) ReqAccountSummary(groupName string, tags string) {
-	reqID := ib.GetReqID()
-	ib.Wrapper.dataChanMap[reqID] = make(chan map[string]string, 5)
-	ib.Client.ReqAccountSummary(reqID, groupName, tags)
+// func (ib *IB) ReqAccountSummary(groupName string, tags string) {
+// 	reqID := ib.GetReqID()
+// 	ib.Wrapper.dataChanMap[reqID] = make(chan map[string]string, 5)
+// 	ib.Client.ReqAccountSummary(reqID, groupName, tags)
 
-	go func() {
-		defer delete(ib.Wrapper.dataChanMap, reqID)
-		for {
-			select {
-			case v, ok := <-ib.Wrapper.dataChanMap[reqID]:
-				if ok {
-					fmt.Println(v)
-				} else {
-					break
-				}
-			}
-		}
-	}()
-}
+// 	go func() {
+// 		defer delete(ib.Wrapper.dataChanMap, reqID)
+// 		for {
+// 			select {
+// 			case v, ok := <-ib.Wrapper.dataChanMap[reqID]:
+// 				if ok {
+// 					fmt.Println(v)
+// 				} else {
+// 					break
+// 				}
+// 			}
+// 		}
+// 	}()
+// }

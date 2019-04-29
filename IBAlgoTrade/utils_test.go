@@ -9,7 +9,14 @@ import (
 )
 
 func TestCreate(t *testing.T) {
-	o := new(ibapi.Order)
+	o := new(Trade)
 	Create(o)
 	fmt.Println(o)
+}
+
+func BenchmarkInitDefault(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		t := new(ibapi.Order)
+		ibapi.InitDefault(t)
+	}
 }
