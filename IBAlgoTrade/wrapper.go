@@ -429,7 +429,7 @@ func (w GoWrapper) RealtimeBar(reqID int64, time int64, open float64, high float
 
 func (w GoWrapper) HistoricalData(reqID int64, bar *BarData) {
 	log.WithField("reqID", reqID).Printf("<historicalData>: bar: %v", bar)
-	w.dataChanMap[reqID] <- *bar
+	w.dataChanMap[reqID] <- bar
 }
 
 func (w GoWrapper) HistoricalDataEnd(reqID int64, startDateStr string, endDateStr string) {
@@ -439,7 +439,7 @@ func (w GoWrapper) HistoricalDataEnd(reqID int64, startDateStr string, endDateSt
 
 func (w GoWrapper) HistoricalDataUpdate(reqID int64, bar *BarData) {
 	log.WithField("reqID", reqID).Printf("<historicalDataUpdate>: bar: %v", bar)
-	w.subDataChanMap[reqID] <- *bar
+	w.subDataChanMap[reqID] <- bar
 }
 
 func (w GoWrapper) HeadTimestamp(reqID int64, headTimestamp string) {

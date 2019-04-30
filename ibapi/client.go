@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -173,8 +174,31 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	ic.setConnState(CONNECTED)
-	ic.wrapper.ConnectAck()
+	ic.wg.Add(1)
+	go ic.goReceive() // receive the data, make sure client receives the nextValidID and manageAccount which help comfirm the client.
+	comfirmMsgIDs := []IN{NEXT_VALID_ID, MANAGED_ACCTS}
+
+comfirmReadyLoop:
+	for {
+		select {
+		case f := <-ic.msgChan:
+			MsgID, _ := strconv.ParseInt(string(f[0]), 10, 64)
+			ic.decoder.interpret(f...)
+			fmt.Println(MsgID)
+			for i, ID := range comfirmMsgIDs {
+				if MsgID == int64(ID) {
+					comfirmMsgIDs = append(comfirmMsgIDs[:i], comfirmMsgIDs[i+1:]...)
+				}
+			}
+			if len(comfirmMsgIDs) == 0 {
+				ic.setConnState(CONNECTED)
+				ic.wrapper.ConnectAck()
+				break comfirmReadyLoop
+			}
+		case <-time.After(10 * time.Second):
+			return ALREADY_CONNECTED
+		}
+	}
 
 	return nil
 }
@@ -2591,9 +2615,8 @@ func (ic *IbClient) Run() error {
 		return errors.New("ibClient is DISCONNECTED")
 	}
 	log.Println("RUN Client")
-	ic.wg.Add(3)
+	ic.wg.Add(2)
 	go ic.goRequest()
-	go ic.goReceive()
 	go ic.goDecode()
 
 	return nil

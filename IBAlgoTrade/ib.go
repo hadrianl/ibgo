@@ -65,12 +65,12 @@ func (ib *IB) DoSomeTest() {
 	// ib.Client.ReqPositions()
 	// ib.Client.ReqIDs(5)
 	time.Sleep(time.Second * 3)
-	// bars := ib.ReqHistoricalData(hsik9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
+	bars := ib.ReqHistoricalData(hsik9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
 	// openOrders := ib.ReqOpenOrders()
-	contractDetails := ib.ReqContractDetails(&hsik9)
+	// contractDetails := ib.ReqContractDetails(&hsik9)
 	time.Sleep(time.Second * 3)
 	// fmt.Println(bars)
-	fmt.Println(contractDetails)
+	fmt.Println(bars)
 	// tags := []string{"AccountType,NetLiquidation,TotalCashValue,SettledCash,",
 	// 	"AccruedCash,BuyingPower,EquityWithLoanValue,",
 	// 	"PreviousEquityWithLoanValue,GrossPositionValue,ReqTEquity,",
@@ -163,7 +163,7 @@ func (ib *IB) ReqHistoricalData(contract ibapi.Contract, endDateTime string, dur
 					if !ok {
 						break barUpdateLoop
 					}
-					newBar := bar.(ibapi.BarData)
+					newBar := *bar.(*ibapi.BarData)
 					count := len(bars.BarList)
 					if count == 0 {
 						bars.BarList = append(bars.BarList, newBar)
@@ -187,7 +187,7 @@ barLoop:
 			if !ok {
 				break barLoop
 			}
-			bars.BarList = append(bars.BarList, bar.(ibapi.BarData))
+			bars.BarList = append(bars.BarList, *bar.(*ibapi.BarData))
 		}
 	}
 
