@@ -1,6 +1,7 @@
 package IBAlgoTrade
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,27 +10,81 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type GoWrapper struct {
-	ib          *IB
-	Logger      *log.Logger
-	mu          sync.Mutex
-	dataChanMap map[int64]chan interface{}
+type Subscriber interface {
+	// GetReqID() int64
+}
 
-	accountValues  map[string]*AccountValues
-	accountSummary map[string]*AccountSummary
-	portfolio      map[string]map[int64]PortfolioItem
+type GoWrapper struct {
+	ib               *IB
+	Logger           *log.Logger
+	mu               sync.RWMutex
+	dataChanMap      map[int64]chan interface{}
+	subDataChanMap   map[int64]chan interface{}
+	reqID2Subscriber map[int64]Subscriber
+	reqID2Contract   map[int64]Contract
+	AccValues        map[string]AccountValues
+	AccSummary       map[string]AccountSummary
+	Portfolio        map[string]map[int64]PortfolioItem
+	Positions        map[string]map[int64]Position
+
+	Trades map[[2]int64]Trade
+	Fills  map[string]Fill
+
+	NewTicks      []NewsTick
+	NewsBulletins map[int64]NewsBulletin
+
+	Tickers map[int64]Ticker
+
+	PnLs       map[int64]PnL
+	PnLSingles map[int64]PnLSingle
 }
 
 func (w *GoWrapper) reset() {
 	w.dataChanMap = make(map[int64]chan interface{})
-	w.accountValues = make(map[string]*AccountValues)
-	w.accountSummary = make(map[string]*AccountSummary)
-	w.accountSummary["All"] = &AccountSummary{Account: "All", TagValues: make(map[string][2]string)}
-	w.portfolio = make(map[string]map[int64]PortfolioItem)
+	w.subDataChanMap = make(map[int64]chan interface{})
+	w.AccValues = make(map[string]AccountValues)
+	w.AccSummary = make(map[string]AccountSummary)
+	w.AccSummary["All"] = AccountSummary{Account: "All", TagValues: make(map[string][2]string)}
+	w.Portfolio = make(map[string]map[int64]PortfolioItem)
+	w.Positions = make(map[string]map[int64]Position)
+	w.PnLs = make(map[int64]PnL)
+	w.Trades = make(map[[2]int64]Trade)
 }
 
-func (w GoWrapper) GetAccountSummary(account string) AccountSummary {
-	return *w.accountSummary[account]
+func (w GoWrapper) startReq(reqID int64, chanSize int) {
+	w.dataChanMap[reqID] = make(chan interface{}, chanSize)
+}
+
+func (w GoWrapper) endReq(reqID int64) {
+	if dataChan, ok := w.dataChanMap[reqID]; ok {
+		close(dataChan)
+		delete(w.dataChanMap, reqID)
+	}
+
+}
+
+func (w GoWrapper) startSubscription(reqID int64, chanSize int, contract Contract) {
+	// w.reqID2Contract[reqID] = contract
+	// w.reqID2Subscriber[reqID] = subscriber
+	w.subDataChanMap[reqID] = make(chan interface{}, chanSize)
+}
+
+func (w GoWrapper) endSubscription(reqID int64) {
+	if subChan, ok := w.subDataChanMap[reqID]; ok {
+		close(subChan)
+		delete(w.subDataChanMap, reqID)
+	}
+	// delete(w.reqID2Contract, reqID)
+
+	// delete(w.reqID2Subscriber, reqID)
+}
+
+func OrderKey(clientID, orderID, permID int64) [2]int64 {
+	if orderID <= 0 {
+		return [2]int64{-1, permID}
+	}
+
+	return [2]int64{clientID, orderID}
 }
 
 func (w GoWrapper) ConnectAck() {
@@ -43,17 +98,19 @@ func (w GoWrapper) NextValidID(reqID int64) {
 
 func (w GoWrapper) ManagedAccounts(accountsList []string) {
 	log.Printf("<managedAccounts>: %v.", accountsList)
+	w.mu.RLock()
+	defer w.mu.RUnlock()
 	for _, acc := range accountsList {
-		if _, ok := w.accountSummary[acc]; !ok {
-			w.accountSummary[acc] = &AccountSummary{Account: acc, TagValues: make(map[string][2]string)}
+		if _, ok := w.AccSummary[acc]; !ok {
+			w.AccSummary[acc] = AccountSummary{Account: acc, TagValues: make(map[string][2]string)}
 		}
 
-		if _, ok := w.accountValues[acc]; !ok {
-			w.accountValues[acc] = &AccountValues{Account: acc, TagValues: make(map[string][3]string)}
+		if _, ok := w.AccValues[acc]; !ok {
+			w.AccValues[acc] = AccountValues{Account: acc, TagValues: make(map[string][3]string)}
 		}
 
-		if _, ok := w.portfolio[acc]; !ok {
-			w.portfolio[acc] = make(map[int64]PortfolioItem)
+		if _, ok := w.Portfolio[acc]; !ok {
+			w.Portfolio[acc] = map[int64]PortfolioItem{}
 		}
 	}
 
@@ -70,7 +127,7 @@ func (w GoWrapper) UpdateAccountTime(accTime time.Time) {
 
 func (w GoWrapper) UpdateAccountValue(tag string, value string, currency string, account string) {
 	log.WithFields(log.Fields{"account": account, tag: value, "currency": currency}).Print("<updateAccountValue>")
-	w.accountValues[account].TagValues[tag] = [3]string{value, currency, ""}
+	w.AccValues[account].TagValues[tag] = [3]string{value, currency, ""}
 }
 
 func (w GoWrapper) AccountDownloadEnd(accName string) {
@@ -79,7 +136,7 @@ func (w GoWrapper) AccountDownloadEnd(accName string) {
 
 func (w GoWrapper) AccountUpdateMulti(reqID int64, account string, modelCode string, tag string, value string, currency string) {
 	log.WithFields(log.Fields{"reqID": reqID, "account": account, tag: value, "currency": currency, "modelCode": modelCode}).Print("<accountUpdateMulti>")
-	w.accountValues[account].TagValues[tag] = [3]string{value, currency, modelCode}
+	w.AccValues[account].TagValues[tag] = [3]string{value, currency, modelCode}
 }
 
 func (w GoWrapper) AccountUpdateMultiEnd(reqID int64) {
@@ -88,7 +145,9 @@ func (w GoWrapper) AccountUpdateMultiEnd(reqID int64) {
 
 func (w GoWrapper) AccountSummary(reqID int64, account string, tag string, value string, currency string) {
 	log.WithFields(log.Fields{"reqID": reqID, "account": account, tag: value, "currency": currency}).Print("<accountSummary>")
-	w.accountSummary[account].TagValues[tag] = [2]string{value, currency}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.AccSummary[account].TagValues[tag] = [2]string{value, currency}
 	// c := w.dataChanMap[reqID]
 	// if c != nil {
 	// 	c <- map[string]string{"account": account, "tag": tag, "value": value, "currency": currency}
@@ -139,21 +198,36 @@ func (w GoWrapper) UpdatePortfolio(contract *Contract, position float64, marketP
 	log.Printf("<updatePortfolio>: contract: %v pos: %v marketPrice: %v averageCost: %v unrealizedPNL: %v realizedPNL: %v", contract.LocalSymbol, position, marketPrice, averageCost, unrealizedPNL, realizedPNL)
 	portfolioItem := PortfolioItem{*contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, account}
 	conID := contract.ContractID
-	portfolioItemMap := w.portfolio[account]
-	if _, ok := portfolioItemMap[conID]; ok {
-		if position != 0 {
-			portfolioItemMap[conID] = portfolioItem
-		} else {
-			delete(portfolioItemMap, conID)
-		}
-	} else {
+	portfolioItemMap, ok := w.Portfolio[account]
+	if !ok {
+		portfolioItemMap = make(map[int64]PortfolioItem)
+		w.Portfolio[account] = portfolioItemMap
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if position != 0 {
 		portfolioItemMap[conID] = portfolioItem
+	} else {
+		delete(portfolioItemMap, conID)
 	}
 
 }
 
 func (w GoWrapper) Position(account string, contract *Contract, position float64, avgCost float64) {
-	log.Printf("<updatePortfolio>: account: %v, contract: %v position: %v, avgCost: %v", account, contract, position, avgCost)
+	log.Printf("<Position>: account: %v, contract: %v position: %v, avgCost: %v", account, contract, position, avgCost)
+	p := Position{account, *contract, position, avgCost}
+	positionMap, ok := w.Positions[account]
+	if !ok {
+		positionMap = make(map[int64]Position)
+		w.Positions[account] = positionMap
+	}
+	conID := contract.ContractID
+	if position != 0 {
+		positionMap[conID] = p
+	} else {
+		delete(positionMap, conID)
+	}
+
 }
 
 func (w GoWrapper) PositionEnd() {
@@ -162,27 +236,122 @@ func (w GoWrapper) PositionEnd() {
 
 func (w GoWrapper) Pnl(reqID int64, dailyPnL float64, unrealizedPnL float64, realizedPnL float64) {
 	log.WithField("reqID", reqID).Printf("<pnl>: dailyPnL: %v unrealizedPnL: %v realizedPnL: %v", dailyPnL, unrealizedPnL, realizedPnL)
+	if pnl, ok := w.PnLs[reqID]; ok {
+		pnl.DailyPnL = dailyPnL
+		pnl.UnrealizePnL = unrealizedPnL
+		pnl.RealizePnL = realizedPnL
+	}
 }
 
 func (w GoWrapper) PnlSingle(reqID int64, position int64, dailyPnL float64, unrealizedPnL float64, realizedPnL float64, value float64) {
 	log.WithField("reqID", reqID).Printf("<pnl>:  position: %v dailyPnL: %v unrealizedPnL: %v realizedPnL: %v value: %v", position, dailyPnL, unrealizedPnL, realizedPnL, value)
+	if pnlSingle, ok := w.PnLSingles[reqID]; ok {
+		pnlSingle.Position = position
+		pnlSingle.PnL.DailyPnL = dailyPnL
+		pnlSingle.PnL.UnrealizePnL = unrealizedPnL
+		pnlSingle.PnL.RealizePnL = realizedPnL
+		pnlSingle.Value = value
+	}
 }
 
 func (w GoWrapper) OpenOrder(orderID int64, contract *Contract, order *Order, orderState *OrderState) {
 	log.WithField("orderID", orderID).Printf("<openOrder>: orderId: %v contract: <%v> order: %v orderState: %v.", orderID, contract, order.OrderID, orderState.Status)
+	if order.WhatIf {
+
+	} else {
+		key := OrderKey(order.ClientID, order.OrderID, order.PermID)
+		trade, ok := w.Trades[key]
+		if ok {
+			trade.Order = order //XXX:
+		} else {
+			w.Trades[key] = Trade{Contract: contract,
+				Order:       order,
+				OrderStatus: &OrderStatus{Status: orderState.Status}}
+			log.WithField("openOrder", key).Info(w.Trades[key])
+		}
+
+		if openOrderChan, ok := w.dataChanMap[int64(-OPEN_ORDER)]; ok {
+			openOrderChan <- order
+		} else {
+			// push openOrderEvent
+		}
+
+	}
 }
 
 func (w GoWrapper) OpenOrderEnd() {
 	log.Printf("<openOrderEnd>")
-
+	w.endReq(int64(-OPEN_ORDER))
 }
 
 func (w GoWrapper) OrderStatus(orderID int64, status string, filled float64, remaining float64, avgFillPrice float64, permID int64, parentID int64, lastFillPrice float64, clientID int64, whyHeld string, mktCapPrice float64) {
 	log.WithField("orderID", orderID).Printf("<orderStatus>: orderId: %v status: %v filled: %v remaining: %v avgFillPrice: %v.", orderID, status, filled, remaining, avgFillPrice)
+	key := OrderKey(clientID, orderID, permID)
+	trade, ok := w.Trades[key]
+	if ok {
+
+		oldStatus := trade.OrderStatus.Status
+		trade.OrderStatus.Status = status
+		trade.OrderStatus.Filled = filled
+		trade.OrderStatus.Remaining = remaining
+		trade.OrderStatus.AverageFillPrice = avgFillPrice
+		trade.OrderStatus.PermID = permID
+		trade.OrderStatus.LastFillPrice = lastFillPrice
+		trade.OrderStatus.ClientID = clientID
+		trade.OrderStatus.WhyHeld = whyHeld
+		trade.OrderStatus.MarketCappedPrice = mktCapPrice
+		trade.OrderStatus.LastLiquidity = 0.0
+
+		logLen := len(trade.Log)
+		var msg string
+
+		if status == "Submitted" || logLen > 0 || trade.Log[logLen-1].Message == "Modify" {
+			msg = "Modified"
+		}
+
+		logEntry := TradeLogEntry{Status: status, Message: msg}
+		trade.Log = append(trade.Log, logEntry)
+
+		if status != oldStatus {
+			switch status {
+			case Filled:
+			case Cancelled:
+			}
+		}
+	} else {
+		log.WithFields(log.Fields{"orderID": orderID, "clientID": clientID}).Error("orderStatus: No order found")
+	}
 }
 
 func (w GoWrapper) ExecDetails(reqID int64, contract *Contract, execution *Execution) {
 	log.WithField("reqID", reqID).Printf("<execDetails>: contract: %v execution: %v.", contract, execution)
+
+	key := OrderKey(execution.ClientID, execution.OrderID, execution.PermID)
+	trade, hasTrade := w.Trades[key]
+
+	var c Contract
+	if hasTrade || contract.ContractID == trade.Contract.ContractID {
+		c = *trade.Contract
+	} else {
+		c = *contract
+	}
+
+	// execTime := execution.Time
+	execTime, err := time.Parse("2006-01-02 15:04:05", execution.Time)
+	if err != nil {
+		fmt.Printf("parse time err: %v execTime: %v", err, execution.Time)
+		panic("parse time err")
+	}
+	fill := Fill{Contract: c, Execution: *execution, CommissionReport: CommissionReport{}, Time: execTime}
+
+	if _, ok := w.Fills[execution.ExecID]; !ok {
+		w.Fills[execution.ExecID] = fill
+		if hasTrade {
+			trade.Fills = append(trade.Fills, fill)
+			logEntry := TradeLogEntry{Time: execTime, Status: trade.OrderStatus.Status, Message: fmt.Sprintf("Fill %v@%v", execution.Shares, execution.Price)}
+			trade.Log = append(trade.Log, logEntry)
+		}
+	}
 }
 
 func (w GoWrapper) ExecDetailsEnd(reqID int64) {
@@ -195,6 +364,27 @@ func (w GoWrapper) DeltaNeutralValidation(reqID int64, deltaNeutralContract Delt
 
 func (w GoWrapper) CommissionReport(commissionReport CommissionReport) {
 	log.Printf("<commissionReport>: commissionReport: %v", commissionReport)
+	if commissionReport.Yield == UNSETFLOAT {
+		commissionReport.Yield = 0
+	}
+
+	if commissionReport.RealizedPNL == UNSETFLOAT {
+		commissionReport.RealizedPNL = 0
+	}
+
+	if fill, hasFill := w.Fills[commissionReport.ExecId]; hasFill {
+		log.WithField("execID", commissionReport.ExecId).Info(commissionReport)
+		key := OrderKey(fill.Execution.ClientID, fill.Execution.OrderID, fill.Execution.PermID)
+		if trade, hasTrade := w.Trades[key]; hasTrade {
+			_ = trade
+			// push the commissionReportEvent
+		} else {
+
+		}
+	} else {
+		log.WithField("commissionReport", commissionReport).Error("No execution found for commissionReport")
+	}
+
 }
 
 func (w GoWrapper) OrderBound(reqID int64, apiClientID int64, apiOrderID int64) {
@@ -203,15 +393,22 @@ func (w GoWrapper) OrderBound(reqID int64, apiClientID int64, apiOrderID int64) 
 
 func (w GoWrapper) ContractDetails(reqID int64, conDetails *ContractDetails) {
 	log.WithField("reqID", reqID).Printf("<contractDetails>: contractDetails: %v", conDetails)
+	if dataChan, ok := w.dataChanMap[reqID]; ok {
+		dataChan <- conDetails
+	}
 
 }
 
 func (w GoWrapper) ContractDetailsEnd(reqID int64) {
 	log.WithField("reqID", reqID).Print("<contractDetailsEnd>")
+	w.endReq(reqID)
 }
 
 func (w GoWrapper) BondContractDetails(reqID int64, conDetails *ContractDetails) {
 	log.WithField("reqID", reqID).Printf("<bondContractDetails>: contractDetails: %v", conDetails)
+	if dataChan, ok := w.dataChanMap[reqID]; ok {
+		dataChan <- conDetails
+	}
 }
 
 func (w GoWrapper) SymbolSamples(reqID int64, contractDescriptions []ContractDescription) {
@@ -232,14 +429,17 @@ func (w GoWrapper) RealtimeBar(reqID int64, time int64, open float64, high float
 
 func (w GoWrapper) HistoricalData(reqID int64, bar *BarData) {
 	log.WithField("reqID", reqID).Printf("<historicalData>: bar: %v", bar)
+	w.dataChanMap[reqID] <- *bar
 }
 
 func (w GoWrapper) HistoricalDataEnd(reqID int64, startDateStr string, endDateStr string) {
 	log.WithField("reqID", reqID).Printf("<historicalDataEnd>: startDate: %v endDate: %v", startDateStr, endDateStr)
+	w.endReq(reqID)
 }
 
 func (w GoWrapper) HistoricalDataUpdate(reqID int64, bar *BarData) {
 	log.WithField("reqID", reqID).Printf("<historicalDataUpdate>: bar: %v", bar)
+	w.subDataChanMap[reqID] <- *bar
 }
 
 func (w GoWrapper) HeadTimestamp(reqID int64, headTimestamp string) {

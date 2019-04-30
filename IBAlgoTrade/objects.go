@@ -127,36 +127,36 @@ import (
 // 	return depthDescrip
 // }
 
-// type PnL struct {
-// 	Account      string
-// 	ModelCode    string
-// 	DailyPnL     float64
-// 	UnrealizePnL float64
-// 	RealizePnL   float64
-// }
+type PnL struct {
+	Account      string
+	ModelCode    string
+	DailyPnL     float64
+	UnrealizePnL float64
+	RealizePnL   float64
+}
 
-// type PnLSingle struct {
-// 	ContractID int64
-// 	Position   int64
-// 	value      float64
-// 	PnL        PnL
-// }
+type PnLSingle struct {
+	ContractID int64
+	Position   int64
+	Value      float64
+	PnL        PnL
+}
 
-// type BarList []interface{}
+type BarList []interface{}
 
-// type BarDataList struct {
-// 	BarList
-// 	ReqID          int64
-// 	Contract       Contract
-// 	EndDateTime    string
-// 	Duration       string
-// 	BarSizeSetting string
-// 	WhatToShow     string
-// 	useRTH         bool
-// 	FormatDate     int
-// 	KeepUpToDate   bool
-// 	ChartOptions   []ibapi.TagValue
-// }
+type BarDataList struct {
+	BarList        []ibapi.BarData
+	ReqID          int64
+	Contract       ibapi.Contract
+	EndDateTime    string
+	Duration       string
+	BarSizeSetting string
+	WhatToShow     string
+	UseRTH         bool
+	FormatDate     int
+	KeepUpToDate   bool
+	ChartOptions   []ibapi.TagValue
+}
 
 // type RealTimeBarList struct {
 // 	BarList
@@ -249,8 +249,8 @@ import (
 
 type TradeLogEntry struct {
 	Time    time.Time
-	status  string
-	message string
+	Status  string
+	Message string
 }
 
 // type PriceIncrement struct {
@@ -277,12 +277,12 @@ type PortfolioItem struct {
 	Account       string
 }
 
-// type Position struct {
-// 	Account     string
-// 	Contract    Contract
-// 	Position    int64
-// 	AverageCost float64
-// }
+type Position struct {
+	Account     string
+	Contract    ibapi.Contract
+	Position    float64
+	AverageCost float64
+}
 
 type Fill struct {
 	Time             time.Time
@@ -330,20 +330,20 @@ type Fill struct {
 // 	Headline     string
 // }
 
-// type NewsTick struct {
-// 	TimeStamp    int64
-// 	ProviderCode string
-// 	ArticleID    string
-// 	Headline     string
-// 	ExtraData    string
-// }
+type NewsTick struct {
+	TimeStamp    int64
+	ProviderCode string
+	ArticleID    string
+	Headline     string
+	ExtraData    string
+}
 
-// type NewsBulletin struct {
-// 	MsgID         int64
-// 	MsgType       int64
-// 	Message       string
-// 	OriginExchang string
-// }
+type NewsBulletin struct {
+	MsgID         int64
+	MsgType       int64
+	Message       string
+	OriginExchang string
+}
 
 // type FamilyCode struct {
 // 	ibapi.FamilyCode

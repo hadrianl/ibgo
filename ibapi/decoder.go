@@ -920,19 +920,19 @@ func (d *ibDecoder) processPortfolioValueMsg(f [][]byte) {
 
 }
 func (d *ibDecoder) processContractDataMsg(f [][]byte) {
-	v := decodeInt(f[1])
+	v := decodeInt(f[0])
 	var reqID int64 = 1
 	if v >= 3 {
-		reqID = decodeInt(f[2])
+		reqID = decodeInt(f[1])
 		f = f[1:]
 	}
 
 	cd := ContractDetails{}
 	cd.Contract = Contract{}
-	cd.Contract.Symbol = decodeString(f[2])
-	cd.Contract.SecurityType = decodeString(f[3])
+	cd.Contract.Symbol = decodeString(f[1])
+	cd.Contract.SecurityType = decodeString(f[2])
 
-	lastTradeDateOrContractMonth := f[4]
+	lastTradeDateOrContractMonth := f[3]
 	if !bytes.Equal(lastTradeDateOrContractMonth, []byte{}) {
 		split := bytes.Split(lastTradeDateOrContractMonth, []byte{32})
 		if len(split) > 0 {
@@ -944,82 +944,83 @@ func (d *ibDecoder) processContractDataMsg(f [][]byte) {
 		}
 	}
 
-	cd.Contract.Strike = decodeFloat(f[5])
-	cd.Contract.Right = decodeString(f[6])
-	cd.Contract.Exchange = decodeString(f[7])
-	cd.Contract.Currency = decodeString(f[8])
-	cd.Contract.LocalSymbol = decodeString(f[9])
-	cd.MarketName = decodeString(f[10])
-	cd.Contract.TradingClass = decodeString(f[11])
-	cd.Contract.ContractID = decodeInt(f[12])
-	cd.MinTick = decodeFloat(f[13])
+	cd.Contract.Strike = decodeFloat(f[4])
+	cd.Contract.Right = decodeString(f[5])
+	cd.Contract.Exchange = decodeString(f[6])
+	cd.Contract.Currency = decodeString(f[7])
+	cd.Contract.LocalSymbol = decodeString(f[8])
+	cd.MarketName = decodeString(f[9])
+	cd.Contract.TradingClass = decodeString(f[10])
+	cd.Contract.ContractID = decodeInt(f[11])
+	cd.MinTick = decodeFloat(f[12])
 	if d.version >= MIN_SERVER_VER_MD_SIZE_MULTIPLIER {
-		cd.MdSizeMultiplier = decodeInt(f[14])
+		cd.MdSizeMultiplier = decodeInt(f[13])
 		f = f[1:]
 	}
 
-	cd.Contract.Multiplier = decodeString(f[14])
-	cd.OrderTypes = decodeString(f[15])
-	cd.ValidExchanges = decodeString(f[16])
-	cd.PriceMagnifier = decodeInt(f[17])
+	cd.Contract.Multiplier = decodeString(f[13])
+	cd.OrderTypes = decodeString(f[14])
+	cd.ValidExchanges = decodeString(f[15])
+	cd.PriceMagnifier = decodeInt(f[16])
 
 	if v >= 4 {
-		cd.UnderContractID = decodeInt(f[18])
+		cd.UnderContractID = decodeInt(f[17])
 		f = f[1:]
 	}
 
 	if v >= 5 {
-		cd.LongName = decodeString(f[18])
-		cd.Contract.PrimaryExchange = decodeString(f[19])
+		cd.LongName = decodeString(f[17])
+		cd.Contract.PrimaryExchange = decodeString(f[18])
 		f = f[2:]
 	}
 
 	if v >= 6 {
-		cd.ContractMonth = decodeString(f[18])
-		cd.Industry = decodeString(f[19])
-		cd.Category = decodeString(f[20])
-		cd.Subcategory = decodeString(f[21])
-		cd.TimezoneID = decodeString(f[22])
-		cd.TradingHours = decodeString(f[23])
-		cd.LiquidHours = decodeString(f[24])
+		cd.ContractMonth = decodeString(f[17])
+		cd.Industry = decodeString(f[18])
+		cd.Category = decodeString(f[19])
+		cd.Subcategory = decodeString(f[20])
+		cd.TimezoneID = decodeString(f[21])
+		cd.TradingHours = decodeString(f[22])
+		cd.LiquidHours = decodeString(f[23])
 		f = f[7:]
 	}
 
 	if v >= 8 {
-		cd.EVRule = decodeString(f[18])
-		cd.EVMultiplier = decodeInt(f[19])
+		cd.EVRule = decodeString(f[17])
+		cd.EVMultiplier = decodeInt(f[18])
 		f = f[2:]
 	}
 
 	if v >= 7 {
 		cd.SecurityIDList = []TagValue{}
-		for secIDListCount := decodeInt(f[18]); secIDListCount > 0; secIDListCount-- {
+		for secIDListCount := decodeInt(f[17]); secIDListCount > 0; secIDListCount-- {
 			tagValue := TagValue{}
-			tagValue.Tag = decodeString(f[19])
-			tagValue.Value = decodeString(f[20])
+			tagValue.Tag = decodeString(f[18])
+			tagValue.Value = decodeString(f[19])
+			cd.SecurityIDList = append(cd.SecurityIDList, tagValue)
 			f = f[2:]
 		}
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_AGG_GROUP {
-		cd.AggGroup = decodeInt(f[18])
+		cd.AggGroup = decodeInt(f[17])
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_UNDERLYING_INFO {
-		cd.UnderSymbol = decodeString(f[18])
-		cd.UnderSecurityType = decodeString(f[19])
+		cd.UnderSymbol = decodeString(f[17])
+		cd.UnderSecurityType = decodeString(f[18])
 		f = f[2:]
 	}
 
 	if d.version >= MIN_SERVER_VER_MARKET_RULES {
-		cd.MarketRuleIDs = decodeString(f[18])
+		cd.MarketRuleIDs = decodeString(f[17])
 		f = f[1:]
 	}
 
 	if d.version >= MIN_SERVER_VER_REAL_EXPIRATION_DATE {
-		cd.RealExpirationDate = decodeString(f[18])
+		cd.RealExpirationDate = decodeString(f[17])
 	}
 
 	d.wrapper.ContractDetails(reqID, &cd)

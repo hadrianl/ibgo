@@ -17,18 +17,18 @@ const (
 )
 
 type Trade struct {
-	Contract   ibapi.Contract
-	Order      ibapi.Order
-	OrderState OrderStatus
-	Fills      []Fill
-	Log        []TradeLogEntry
+	Contract    *ibapi.Contract
+	Order       *ibapi.Order
+	OrderStatus *OrderStatus
+	Fills       []Fill
+	Log         []TradeLogEntry
 }
 
 type OrderStatus struct {
 	OrderID           int64
 	Status            string
-	Filled            int64
-	Remaining         int64
+	Filled            float64
+	Remaining         float64
 	AverageFillPrice  float64
 	PermID            int64
 	ParentID          int64
@@ -36,7 +36,7 @@ type OrderStatus struct {
 	ClientID          int64
 	WhyHeld           string
 	MarketCappedPrice float64
-	LastLiquidity     int64
+	LastLiquidity     float64
 }
 
 func NewOrder() *ibapi.Order {

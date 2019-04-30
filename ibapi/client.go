@@ -2573,7 +2573,7 @@ decodeLoop:
 		// buf := []byte
 		select {
 		case f := <-ic.msgChan:
-			ic.decoder.interpret(f...)
+			go ic.decoder.interpret(f...)
 		case e := <-ic.errChan:
 			log.Error(e)
 		case <-ic.terminatedSignal:
