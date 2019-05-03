@@ -95,7 +95,7 @@ func field2Buf(msg interface{}) []byte {
 	// 	b = encodeTime(msg.(time.Time))
 
 	default:
-		log.Panic("errmakeMsgBuf: can't converst the param")
+		log.Panicf("errmakeMsgBuf: can't converst the param-> %v", msg)
 	}
 
 	return append(b, '\x00')

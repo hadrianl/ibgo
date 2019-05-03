@@ -20,7 +20,16 @@ func TestIB(t *testing.T) {
 	fmt.Println(ib.Wrapper.AccSummary)
 	fmt.Println(ib.Wrapper.AccValues)
 	fmt.Println(ib.Wrapper.Portfolio)
-	time.Sleep(time.Second * 20)
+	go func() {
+		for {
+			for _, pnl := range ib.Wrapper.PnLs {
+				fmt.Print(*pnl)
+			}
+			time.Sleep(5 * time.Second)
+		}
+
+	}()
+	time.Sleep(time.Second * 60 * 30)
 	if err := ib.DisConnect(); err != nil {
 		log.Panicf("DisConnect failed: %v", err)
 	}

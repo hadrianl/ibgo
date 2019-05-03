@@ -2,15 +2,21 @@ package IBAlgoTrade
 
 import (
 	"fmt"
+	"github.com/hadrianl/ibgo/ibapi"
+	// "runtime"
+	"strings"
 	"sync/atomic"
 	"time"
-
-	"github.com/hadrianl/ibgo/ibapi"
 )
+
+// func init() {
+// 	fmt.Print("GOMAXPROCS")
+// 	runtime.GOMAXPROCS(4)
+// }
 
 type IB struct {
 	Client   *ibapi.IbClient
-	Wrapper  GoWrapper
+	Wrapper  *GoWrapper
 	host     string
 	port     int
 	clientID int64
@@ -23,7 +29,7 @@ func NewIB(host string, port int, clientID int64) *IB {
 		port:     port,
 		clientID: clientID,
 	}
-	wrapper := GoWrapper{ib: ib}
+	wrapper := &GoWrapper{ib: ib}
 	wrapper.reset()
 	ibclient := ibapi.NewIbClient(wrapper)
 	ib.Client = ibclient
@@ -59,28 +65,30 @@ func (ib *IB) GetReqID() int64 {
 func (ib *IB) DoSomeTest() {
 	hsik9 := ibapi.Contract{359142357, "HSI", "FUT", "20190530", 0, "?", "50", "HKFE", "HKD", "HSIK9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
-	// ib.Client.ReqCurrentTime()
-	// ib.Client.ReqAutoOpenOrders(true)
-	// ib.Client.ReqAccountUpdates(true, "")
-	// ib.Client.ReqPositions()
+	ib.Client.ReqCurrentTime()
+	ib.Client.ReqAutoOpenOrders(true)
+	ib.Client.ReqAccountUpdates(true, "")
+	ib.Client.ReqPositions()
 	// ib.Client.ReqIDs(5)
 	time.Sleep(time.Second * 3)
 	bars := ib.ReqHistoricalData(hsik9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
-	// openOrders := ib.ReqOpenOrders()
+	ib.ReqOpenOrders()
+	// fmt.Print(openOrders)
 	// contractDetails := ib.ReqContractDetails(&hsik9)
 	time.Sleep(time.Second * 3)
 	// fmt.Println(bars)
 	fmt.Println(bars)
-	// tags := []string{"AccountType,NetLiquidation,TotalCashValue,SettledCash,",
-	// 	"AccruedCash,BuyingPower,EquityWithLoanValue,",
-	// 	"PreviousEquityWithLoanValue,GrossPositionValue,ReqTEquity,",
-	// 	"ReqTMargin,SMA,InitMarginReq,MaintMarginReq,AvailableFunds,",
-	// 	"ExcessLiquidity,Cushion,FullInitMarginReq,FullMaintMarginReq,",
-	// 	"FullAvailableFunds,FullExcessLiquidity,LookAheadNextChange,",
-	// 	"LookAheadInitMarginReq,LookAheadMaintMarginReq,",
-	// 	"LookAheadAvailableFunds,LookAheadExcessLiquidity,",
-	// 	"HighestSeverity,DayTradesRemaining,Leverage,$LEDGER:ALL"}
-	// ib.Client.ReqAccountSummary(ib.GetReqID(), "All", strings.Join(tags, ""))
+	tags := []string{"AccountType,NetLiquidation,TotalCashValue,SettledCash,",
+		"AccruedCash,BuyingPower,EquityWithLoanValue,",
+		"PreviousEquityWithLoanValue,GrossPositionValue,ReqTEquity,",
+		"ReqTMargin,SMA,InitMarginReq,MaintMarginReq,AvailableFunds,",
+		"ExcessLiquidity,Cushion,FullInitMarginReq,FullMaintMarginReq,",
+		"FullAvailableFunds,FullExcessLiquidity,LookAheadNextChange,",
+		"LookAheadInitMarginReq,LookAheadMaintMarginReq,",
+		"LookAheadAvailableFunds,LookAheadExcessLiquidity,",
+		"HighestSeverity,DayTradesRemaining,Leverage,$LEDGER:ALL"}
+	ib.Client.ReqAccountSummary(ib.GetReqID(), "All", strings.Join(tags, ""))
+	ib.ReqPnL("DU1382837", "")
 	// ib.Client.ReqOpenOrders()
 	// ib.Client.ReqContractDetails(ib.GetReqID(), &hsik9)
 	// ib.Client.ReqRealTimeBars(ib.GetReqID(), &hsik9, 5, "TRADES", false, nil)
@@ -122,7 +130,7 @@ func (ib *IB) DoSomeTest() {
 func (ib *IB) ReqPnL(account string, modelCode string) *PnL {
 	reqID := ib.GetReqID()
 	pnl := PnL{Account: account, ModelCode: modelCode}
-	ib.Wrapper.PnLs[reqID] = pnl
+	ib.Wrapper.PnLs[reqID] = &pnl
 	ib.Client.ReqPnL(reqID, account, modelCode)
 	return &pnl
 }
@@ -131,7 +139,7 @@ func (ib *IB) ReqPnLSingle(account string, modelCode string, contractID int64) *
 	reqID := ib.GetReqID()
 	pnl := PnL{Account: account, ModelCode: modelCode}
 	pnlSingle := PnLSingle{ContractID: contractID, PnL: pnl}
-	ib.Wrapper.PnLSingles[reqID] = pnlSingle
+	ib.Wrapper.PnLSingles[reqID] = &pnlSingle
 	ib.Client.ReqPnLSingle(reqID, account, modelCode, contractID)
 	return &pnlSingle
 }

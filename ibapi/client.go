@@ -174,7 +174,6 @@ func (ic *IbClient) HandShake() error {
 		return err
 	}
 
-	ic.wg.Add(1)
 	go ic.goReceive() // receive the data, make sure client receives the nextValidID and manageAccount which help comfirm the client.
 	comfirmMsgIDs := []IN{NEXT_VALID_ID, MANAGED_ACCTS}
 
@@ -260,7 +259,7 @@ func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList s
 	}
 
 	v := 11
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 30)
 	fields = append(fields,
 		REQ_MKT_DATA,
 		v,
@@ -333,7 +332,7 @@ func (ic *IbClient) ReqMktData(reqID int64, contract Contract, genericTickList s
 //CancelMktData
 func (ic *IbClient) CancelMktData(reqID int64) {
 	v := 2
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 3)
 	fields = append(fields,
 		CANCEL_MKT_DATA,
 		v,
@@ -364,7 +363,7 @@ func (ic *IbClient) ReqMarketDataType(marketDataType int64) {
 	}
 
 	v := 1
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 3)
 	fields = append(fields, REQ_MARKET_DATA_TYPE, v, marketDataType)
 
 	msg := makeMsgBuf(fields...)
@@ -405,7 +404,7 @@ func (ic *IbClient) ReqTickByTickData(reqID int64, contract *Contract, tickType 
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 16)
 	fields = append(fields, REQ_TICK_BY_TICK_DATA,
 		reqID,
 		contract.ContractID,
@@ -471,7 +470,7 @@ func (ic *IbClient) CalculateImpliedVolatility(reqID int64, contract *Contract, 
 
 	v := 3
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 19)
 	fields = append(fields,
 		REQ_CALC_IMPLIED_VOLAT,
 		v,
@@ -525,7 +524,7 @@ func (ic *IbClient) CalculateOptionPrice(reqID int64, contract *Contract, volati
 	}
 
 	v := 3
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 19)
 	fields = append(fields,
 		REQ_CALC_OPTION_PRICE,
 		v,
@@ -602,7 +601,7 @@ func (ic *IbClient) ExerciseOptions(reqID int64, contract *Contract, exerciseAct
 	}
 
 	v := 2
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 17)
 
 	fields = append(fields, EXERCISE_OPTIONS, v, reqID)
 
@@ -784,7 +783,7 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		v = 45
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 150)
 	fields = append(fields, PLACE_ORDER)
 
 	if ic.serverVersion < MIN_SERVER_VER_ORDER_CONTAINER {
@@ -1414,7 +1413,7 @@ When this function is called, the execution reports that meet the
 */
 func (ic *IbClient) ReqExecutions(reqID int64, execFilter ExecutionFilter) {
 	v := 3
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 10)
 	fields = append(fields, REQ_EXECUTIONS, v)
 
 	if ic.serverVersion >= MIN_SERVER_VER_EXECUTION_DATA_CHAIN {
@@ -1459,7 +1458,7 @@ func (ic *IbClient) ReqContractDetails(reqID int64, contract *Contract) {
 	}
 
 	v := 8
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 20)
 	fields = append(fields, REQ_CONTRACT_DATA, v)
 
 	if ic.serverVersion >= MIN_SERVER_VER_CONTRACT_DATA_CHAIN {
@@ -1555,7 +1554,7 @@ func (ic *IbClient) reqMktDepth(reqID int64, contract *Contract, numRows int, is
 	}
 
 	v := 5
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 17)
 	fields = append(fields, REQ_MKT_DEPTH, v, reqID)
 
 	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
@@ -1608,7 +1607,7 @@ func (ic *IbClient) CancelMktDepth(reqID int64, isSmartDepth bool) {
 		return
 	}
 	v := 1
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 4)
 	fields = append(fields, CANCEL_MKT_DEPTH, v, reqID)
 
 	if ic.serverVersion >= MIN_SERVER_VER_SMART_DEPTH {
@@ -1768,7 +1767,7 @@ func (ic *IbClient) ReqHistoricalData(reqID int64, contract Contract, endDateTim
 
 	v := 6
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 30)
 	fields = append(fields, REQ_HISTORICAL_DATA)
 	if ic.serverVersion <= MIN_SERVER_VER_SYNT_REALTIME_BARS {
 		fields = append(fields, v)
@@ -1856,7 +1855,7 @@ func (ic *IbClient) ReqHeadTimeStamp(reqID int64, contract *Contract, whatToShow
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 19)
 
 	fields = append(fields,
 		REQ_HEAD_TIMESTAMP,
@@ -1901,7 +1900,7 @@ func (ic *IbClient) ReqHistogramData(reqID int64, contract *Contract, useRTH boo
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 18)
 	fields = append(fields,
 		REQ_HISTOGRAM_DATA,
 		reqID,
@@ -1943,7 +1942,7 @@ func (ic *IbClient) ReqHistoricalTicks(reqID int64, contract *Contract, startDat
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 22)
 	fields = append(fields,
 		REQ_HISTORICAL_TICKS,
 		reqID,
@@ -2003,7 +2002,7 @@ func (ic *IbClient) ReqScannerSubscription(reqID int64, subscription *ScannerSub
 	}
 
 	v := 4
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 25)
 	fields = append(fields, REQ_SCANNER_SUBSCRIPTION)
 
 	if ic.serverVersion < MIN_SERVER_VER_SCANNER_GENERIC_OPTS {
@@ -2099,7 +2098,7 @@ func (ic *IbClient) ReqRealTimeBars(reqID int64, contract *Contract, barSize int
 	}
 
 	v := 3
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 19)
 	fields = append(fields, REQ_REAL_TIME_BARS, v, reqID)
 
 	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
@@ -2194,7 +2193,7 @@ func (ic *IbClient) ReqFundamentalData(reqID int64, contract *Contract, reportTy
 	}
 
 	v := 2
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 12)
 	fields = append(fields, REQ_FUNDAMENTAL_DATA, v, reqID)
 
 	if ic.serverVersion >= MIN_SERVER_VER_TRADING_CLASS {
@@ -2264,7 +2263,7 @@ func (ic *IbClient) ReqNewsArticle(reqID int64, providerCode string, articleID s
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 5)
 	fields = append(fields,
 		REQ_NEWS_ARTICLE,
 		reqID,
@@ -2293,7 +2292,7 @@ func (ic *IbClient) ReqHistoricalNews(reqID int64, contractID int64, providerCod
 		return
 	}
 
-	fields := make([]interface{}, 0)
+	fields := make([]interface{}, 0, 8)
 	fields = append(fields,
 		REQ_HISTORICAL_NEWS,
 		reqID,
@@ -2531,6 +2530,9 @@ func (ic *IbClient) goRequest() {
 	log.Info("Start goRequest!")
 	defer log.Info("End goRequest!")
 	defer ic.wg.Done()
+
+	ic.wg.Add(1)
+
 requestLoop:
 	for {
 		select {
@@ -2562,6 +2564,9 @@ func (ic *IbClient) goReceive() {
 	// buf := make([]byte, 0, 4096)
 	defer log.Info("End goReceive!")
 	defer ic.wg.Done()
+
+	ic.wg.Add(1)
+
 	for {
 		// buf := []byte
 		msgBuf, err := readMsgBuf(ic.reader)
@@ -2592,6 +2597,8 @@ func (ic *IbClient) goDecode() {
 	defer log.Info("End goDecode!")
 	defer ic.wg.Done()
 
+	ic.wg.Add(1)
+
 decodeLoop:
 	for {
 		// buf := []byte
@@ -2615,7 +2622,7 @@ func (ic *IbClient) Run() error {
 		return errors.New("ibClient is DISCONNECTED")
 	}
 	log.Println("RUN Client")
-	ic.wg.Add(2)
+
 	go ic.goRequest()
 	go ic.goDecode()
 
