@@ -1,6 +1,7 @@
 package IBAlgoTrade
 
 import (
+	"errors"
 	"fmt"
 	"github.com/hadrianl/ibgo/ibapi"
 	// "runtime"
@@ -89,6 +90,7 @@ func (ib *IB) DoSomeTest() {
 		"HighestSeverity,DayTradesRemaining,Leverage,$LEDGER:ALL"}
 	ib.Client.ReqAccountSummary(ib.GetReqID(), "All", strings.Join(tags, ""))
 	ib.ReqPnL("DU1382837", "")
+	ib.ReqAccountUpdates("")
 	// ib.Client.ReqOpenOrders()
 	// ib.Client.ReqContractDetails(ib.GetReqID(), &hsik9)
 	// ib.Client.ReqRealTimeBars(ib.GetReqID(), &hsik9, 5, "TRADES", false, nil)
@@ -246,4 +248,33 @@ contractDetailsLoop:
 	}
 
 	return contractDetailsList
+}
+
+func (ib *IB) QualifyContracts(contract *ibapi.Contract) (*ibapi.Contract, error) {
+	details := ib.ReqContractDetails(contract)
+	detailsCount := len(details)
+	if detailsCount == 0 {
+		return nil, errors.New("Unknown contract")
+	} else if detailsCount == 1 {
+		return &details[0].Contract, nil
+	} else {
+		return nil, errors.New("UAmbiguous contract. " + string(detailsCount) + "possibles")
+	}
+}
+
+func (ib *IB) ReqAccountUpdates(accName string) []AccountValues {
+	ib.Wrapper.startReq(-int64(ibapi.ACCT_VALUE), 10)
+	ib.Client.ReqAccountUpdates(true, accName)
+	ib.Wrapper.endReq(int64(ibapi.ACCT_VALUE))
+	accValues := []AccountValues{}
+	if accName == "" {
+		for _, accValue := range ib.Wrapper.AccValues {
+			accValues = append(accValues, *accValue)
+		}
+	} else {
+		if accValue, ok := ib.Wrapper.AccValues[accName]; ok {
+			accValues = append(accValues, *accValue)
+		}
+	}
+	return accValues
 }

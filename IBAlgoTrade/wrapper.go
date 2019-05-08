@@ -64,8 +64,6 @@ func (w *GoWrapper) endReq(reqID int64) {
 }
 
 func (w *GoWrapper) startSubscription(reqID int64, chanSize int, contract Contract) {
-	// w.reqID2Contract[reqID] = contract
-	// w.reqID2Subscriber[reqID] = subscriber
 	w.subDataChanMap[reqID] = make(chan interface{}, chanSize)
 }
 
@@ -74,9 +72,6 @@ func (w *GoWrapper) endSubscription(reqID int64) {
 		close(subChan)
 		delete(w.subDataChanMap, reqID)
 	}
-	// delete(w.reqID2Contract, reqID)
-
-	// delete(w.reqID2Subscriber, reqID)
 }
 
 func OrderKey(clientID, orderID, permID int64) [2]int64 {
@@ -141,6 +136,7 @@ func (w *GoWrapper) AccountUpdateMulti(reqID int64, account string, modelCode st
 
 func (w *GoWrapper) AccountUpdateMultiEnd(reqID int64) {
 	log.WithField("reqID", reqID).Print("<accountUpdateMultiEnd>")
+	w.endReq(reqID)
 }
 
 func (w *GoWrapper) AccountSummary(reqID int64, account string, tag string, value string, currency string) {

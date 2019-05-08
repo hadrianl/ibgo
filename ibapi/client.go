@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
+	// "fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -183,7 +183,7 @@ comfirmReadyLoop:
 		case f := <-ic.msgChan:
 			MsgID, _ := strconv.ParseInt(string(f[0]), 10, 64)
 			ic.decoder.interpret(f...)
-			fmt.Println(MsgID)
+			log.Debug(MsgID)
 			for i, ID := range comfirmMsgIDs {
 				if MsgID == int64(ID) {
 					comfirmMsgIDs = append(comfirmMsgIDs[:i], comfirmMsgIDs[i+1:]...)
@@ -2604,7 +2604,7 @@ decodeLoop:
 		// buf := []byte
 		select {
 		case f := <-ic.msgChan:
-			go ic.decoder.interpret(f...)
+			ic.decoder.interpret(f...)
 		case e := <-ic.errChan:
 			log.Error(e)
 		case <-ic.terminatedSignal:
