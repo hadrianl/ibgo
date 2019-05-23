@@ -50,13 +50,13 @@ func (ib *IB) DisConnect() error {
 }
 
 func (ib *IB) DoSomeTest() {
-	// hsij9 := Contract{355299154, "HSI", "FUT", "20190429", 0, "?", "50", "HKFE", "HKD", "HSIJ9", "HSI", "", false, "", "", "", nil, nil}
+	hsij9 := ibapi.Contract{359142357, "HSI", "FUT", "20190530", 0, "?", "50", "HKFE", "HKD", "HSIK9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
 	// ib.Client.ReqCurrentTime()
 	// ib.Client.ReqAutoOpenOrders(true)
 	// ib.Client.ReqAccountUpdates(true, "")
 
-	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, []TagValue{})
+	ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
 	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
 	// ef := ExecutionFilter{}
 	// ib.Client.ReqExecutions(ib.Client.GetReqID(), ef)
@@ -67,13 +67,13 @@ func (ib *IB) DoSomeTest() {
 	// order.OrderType = "LMT"
 	// order.TotalQuantity = 1
 	time.Sleep(time.Second * 3)
-	ib.Client.ReqPnL(1, "DU1382837", "")
+	// ib.Client.ReqPnL(1, "DU1382837", "")
 	// ib.Client.PlaceOrder(2271, &hsij9, order)
 }
 
 func main() {
 	log.SetLevel(log.InfoLevel)
-	ib := NewIB("127.0.0.1", 7497, 0)
+	ib := NewIB("192.168.2.226", 4002, 0)
 	if err := ib.Connect(); err != nil {
 		log.Panicf("Connect failed: %v", err)
 	}

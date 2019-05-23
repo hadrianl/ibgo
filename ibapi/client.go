@@ -2562,7 +2562,7 @@ requestLoop:
 			}
 
 			nn, err := ic.writer.Write(req)
-			log.Print(nn, req)
+			log.Debug(nn, req)
 			if err != nil {
 				log.Print(err)
 				ic.writer.Reset(ic.conn)

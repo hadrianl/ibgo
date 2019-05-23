@@ -601,3 +601,11 @@ func (w *GoWrapper) CurrentTime(t time.Time) {
 func (w *GoWrapper) Error(reqID int64, errCode int64, errString string) {
 	log.WithFields(log.Fields{"reqID": reqID, "errCode": errCode, "errString": errString}).Error("GoWrapper Error!")
 }
+
+func (w *GoWrapper) CompletedOrder(contract *Contract, order *Order, orderState *OrderState) {
+	log.Printf("<completedOrder>: contract: %v order: %v orderState: %v", contract, order, orderState)
+}
+
+func (w *GoWrapper) CompletedOrdersEnd() {
+	log.Println("<completedOrdersEnd>:")
+}
