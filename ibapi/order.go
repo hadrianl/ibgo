@@ -192,7 +192,7 @@ type Order struct {
 	ImbalanceOnly        bool
 	RouteMarketableToBbo bool
 	ParenPermID          int64
-	UsePriceMgmtAlgo     bool
+	UsePriceMgmtAlgo     int64 `default:"UNSETINT"`
 
 	SoftDollarTier SoftDollarTier
 

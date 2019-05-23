@@ -775,6 +775,9 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 	case v < MIN_SERVER_VER_ORDER_CONTAINER && order.IsOmsContainer:
 		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support oms container parameter")
 		return
+	case v < MIN_SERVER_VER_PRICE_MGMT_ALGO && o.UsePriceMgmtAlgo != UNSETINT:
+		ic.wrapper.Error(orderID, UPDATE_TWS.code, UPDATE_TWS.msg+" It does not support Use price management algo requests")
+		return
 	}
 
 	var v int
@@ -1136,6 +1139,10 @@ func (ic *IbClient) PlaceOrder(orderID int64, contract *Contract, order *Order) 
 		}
 
 		if ic.serverVersion >= MIN_SERVER_VER_D_PEG_ORDERS {
+			fields = append(fields, order.DiscretionaryUpToLimitPrice)
+		}
+
+		if ic.serverVersion >= MIN_SERVER_VER_PRICE_MGMT_ALGO {
 			fields = append(fields, order.DiscretionaryUpToLimitPrice)
 		}
 

@@ -873,7 +873,7 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	if d.version >= MIN_SERVER_VER_PRICE_MGMT_ALGO {
-		o.UsePriceMgmtAlgo = decodeBool(f[80])
+		o.UsePriceMgmtAlgo = decodeFloatCheckUnset(f[80])
 		f = f[1:]
 	}
 
