@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+
 	// "fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -2520,6 +2521,17 @@ func (ic *IbClient) ReqMatchingSymbols(reqID int64, pattern string) {
 func (ic *IbClient) ReqCurrentTime() {
 	v := 1
 	msg := makeMsgBuf(REQ_CURRENT_TIME, v)
+
+	ic.reqChan <- msg
+}
+
+/*ReqCompletedOrders
+Call this function to request the completed orders. If apiOnly parameter
+is true, then only completed orders placed from API are requested.
+Each completed order will be fed back through the
+completedOrder() function on the EWrapper.*/
+func (ic *IbClient) ReqCompletedOrders(apiOnly bool) {
+	msg := makeMsgBuf(REQ_COMPLETED_ORDERS, apiOnly)
 
 	ic.reqChan <- msg
 }

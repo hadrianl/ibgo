@@ -148,7 +148,8 @@ func (d *ibDecoder) setmsgID2process() {
 		HISTORICAL_TICKS_LAST:                    d.processHistoricalTicksLast,
 		TICK_BY_TICK:                             d.processTickByTickMsg,
 		ORDER_BOUND:                              d.processOrderBoundMsg,
-	}
+		COMPLETED_ORDER:                          d.processCompletedOrderMsg,
+		COMPLETED_ORDERS_END:                     d.processCompletedOrdersEndMsg}
 
 }
 
@@ -592,6 +593,8 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	o.Rule80A = decodeString(f[33])
 	o.PercentOffset = decodeFloatCheckUnset(f[34]) //show_unset
 	o.SettlingFirm = decodeString(f[35])
+
+	//ShortSaleParams
 	o.ShortSaleSlot = decodeInt(f[36])
 	o.DesignatedLocation = decodeString(f[37])
 
@@ -644,7 +647,6 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 	}
 
 	o.ContinuousUpdate = decodeBool(f[59])
-
 	o.ReferencePriceType = decodeInt(f[60])
 
 	o.TrailStopPrice = decodeFloatCheckUnset(f[61])
@@ -867,6 +869,11 @@ func (d *ibDecoder) processOpenOrder(f [][]byte) {
 
 	if d.version >= MIN_SERVER_VER_D_PEG_ORDERS {
 		o.DiscretionaryUpToLimitPrice = decodeBool(f[80])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_PRICE_MGMT_ALGO {
+		o.UsePriceMgmtAlgo = decodeBool(f[80])
 		f = f[1:]
 	}
 
@@ -1814,6 +1821,7 @@ func (d *ibDecoder) processTickByTickMsg(f [][]byte) {
 		d.wrapper.TickByTickMidPoint(reqID, time, midPoint)
 	}
 }
+
 func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
 	reqID := decodeInt(f[0])
 	apiClientID := decodeInt(f[1])
@@ -1822,8 +1830,342 @@ func (d *ibDecoder) processOrderBoundMsg(f [][]byte) {
 	d.wrapper.OrderBound(reqID, apiClientID, apiOrderID)
 
 }
+
 func (d *ibDecoder) processMarketDepthL2Msg(f [][]byte) {
 
 }
 
+func (d *ibDecoder) processCompletedOrderMsg(f [][]byte) {
+	o := &Order{}
+	c := &Contract{}
+	orderState := &OrderState{}
+
+	version := UNSETINT
+
+	c.ContractID = decodeInt(f[0])
+	c.Symbol = decodeString(f[1])
+	c.SecurityType = decodeString(f[2])
+	c.Expiry = decodeString(f[3])
+	c.Strike = decodeFloat(f[4])
+	c.Right = decodeString(f[5])
+
+	if d.version >= 32 {
+		c.Multiplier = decodeString(f[6])
+		f = f[1:]
+	}
+
+	c.Exchange = decodeString(f[6])
+	c.Currency = decodeString(f[7])
+	c.LocalSymbol = decodeString(f[8])
+
+	if d.version >= 32 {
+		c.TradingClass = decodeString(f[9])
+		f = f[1:]
+	}
+
+	o.Action = decodeString(f[9])
+	if d.version >= MIN_SERVER_VER_FRACTIONAL_POSITIONS {
+		o.TotalQuantity = decodeFloat(f[10])
+	} else {
+		o.TotalQuantity = float64(decodeInt(f[10]))
+	}
+
+	o.OrderType = decodeString(f[11])
+	if version < 29 {
+		o.LimitPrice = decodeFloat(f[12])
+	} else {
+		o.LimitPrice = decodeFloatCheckUnset(f[12])
+	}
+
+	if version < 30 {
+		o.AuxPrice = decodeFloat(f[13])
+	} else {
+		o.AuxPrice = decodeFloatCheckUnset(f[13])
+	}
+
+	o.TIF = decodeString(f[14])
+	o.OCAGroup = decodeString(f[15])
+	o.Account = decodeString(f[16])
+	o.OpenClose = decodeString(f[17])
+
+	o.Origin = decodeInt(f[18])
+
+	o.OrderRef = decodeString(f[19])
+	o.ClientID = decodeInt(f[20])
+	o.PermID = decodeInt(f[21])
+
+	o.OutsideRTH = decodeBool(f[22])
+	o.Hidden = decodeBool(f[23])
+	o.DiscretionaryAmount = decodeFloat(f[24])
+	o.GoodAfterTime = decodeString(f[25])
+
+	o.FAGroup = decodeString(f[26])
+	o.FAMethod = decodeString(f[27])
+	o.FAPercentage = decodeString(f[28])
+	o.FAProfile = decodeString(f[29])
+
+	if d.version >= MIN_SERVER_VER_MODELS_SUPPORT {
+		o.ModelCode = decodeString(f[30])
+		f = f[1:]
+	}
+
+	o.GoodTillDate = decodeString(f[30])
+
+	o.Rule80A = decodeString(f[31])
+	o.PercentOffset = decodeFloatCheckUnset(f[32]) //show_unset
+	o.SettlingFirm = decodeString(f[33])
+
+	//ShortSaleParams
+	o.ShortSaleSlot = decodeInt(f[34])
+	o.DesignatedLocation = decodeString(f[35])
+
+	if d.version == MIN_SERVER_VER_SSHORTX_OLD {
+		f = f[1:]
+	} else if version >= 23 {
+		o.ExemptCode = decodeInt(f[36])
+		f = f[1:]
+	}
+
+	//BoxOrderParams
+	o.StartingPrice = decodeFloatCheckUnset(f[36]) //show_unset
+	o.StockRefPrice = decodeFloatCheckUnset(f[37]) //show_unset
+	o.Delta = decodeFloatCheckUnset(f[38])         //show_unset
+
+	//PegToStkOrVolOrderParams
+	o.StockRangeLower = decodeFloatCheckUnset(f[39]) //show_unset
+	o.StockRangeUpper = decodeFloatCheckUnset(f[40]) //show_unset
+
+	o.DisplaySize = decodeInt(f[41])
+	o.SweepToFill = decodeBool(f[42])
+	o.AllOrNone = decodeBool(f[43])
+	o.MinQty = decodeIntCheckUnset(f[44]) //show_unset
+	o.OCAType = decodeInt(f[45])
+	o.TriggerMethod = decodeInt(f[46])
+
+	//VolOrderParams
+	o.Volatility = decodeFloatCheckUnset(f[47]) //show_unset
+	o.VolatilityType = decodeInt(f[48])
+	o.DeltaNeutralOrderType = decodeString(f[49])
+	o.DeltaNeutralAuxPrice = decodeFloatCheckUnset(f[50])
+
+	if version >= 27 && o.DeltaNeutralOrderType != "" {
+		o.DeltaNeutralContractID = decodeInt(f[51])
+		o.DeltaNeutralSettlingFirm = decodeString(f[52])
+		o.DeltaNeutralClearingAccount = decodeString(f[53])
+		o.DeltaNeutralClearingIntent = decodeString(f[54])
+		f = f[4:]
+	}
+
+	if version >= 31 && o.DeltaNeutralOrderType != "" {
+		o.DeltaNeutralOpenClose = decodeString(f[51])
+		o.DeltaNeutralShortSale = decodeBool(f[52])
+		o.DeltaNeutralShortSaleSlot = decodeInt(f[53])
+		o.DeltaNeutralDesignatedLocation = decodeString(f[54])
+		f = f[4:]
+	}
+
+	o.ContinuousUpdate = decodeBool(f[51])
+	o.ReferencePriceType = decodeInt(f[52])
+
+	//TrailParams
+	o.TrailStopPrice = decodeFloatCheckUnset(f[53])
+
+	if version >= 30 {
+		o.TrailingPercent = decodeFloatCheckUnset(f[54]) //show_unset
+		f = f[1:]
+	}
+
+	//ComboLegs
+	c.ComboLegsDescription = decodeString(f[54])
+
+	if version >= 29 {
+		c.ComboLegs = []ComboLeg{}
+		for comboLegsCount := decodeInt(f[55]); comboLegsCount > 0; comboLegsCount-- {
+			fmt.Println("comboLegsCount:", comboLegsCount)
+			comboleg := ComboLeg{}
+			comboleg.ContractID = decodeInt(f[56])
+			comboleg.Ratio = decodeInt(f[57])
+			comboleg.Action = decodeString(f[58])
+			comboleg.Exchange = decodeString(f[59])
+			comboleg.OpenClose = decodeInt(f[60])
+			comboleg.ShortSaleSlot = decodeInt(f[61])
+			comboleg.DesignatedLocation = decodeString(f[62])
+			comboleg.ExemptCode = decodeInt(f[63])
+			c.ComboLegs = append(c.ComboLegs, comboleg)
+			f = f[8:]
+		}
+		f = f[1:]
+
+		o.OrderComboLegs = []OrderComboLeg{}
+		for orderComboLegsCount := decodeInt(f[55]); orderComboLegsCount > 0; orderComboLegsCount-- {
+			orderComboLeg := OrderComboLeg{}
+			orderComboLeg.Price = decodeFloatCheckUnset(f[56])
+			o.OrderComboLegs = append(o.OrderComboLegs, orderComboLeg)
+			f = f[1:]
+		}
+		f = f[1:]
+	}
+
+	//SmartComboRoutingParams
+	if version >= 26 {
+		o.SmartComboRoutingParams = []TagValue{}
+		for smartComboRoutingParamsCount := decodeInt(f[55]); smartComboRoutingParamsCount > 0; smartComboRoutingParamsCount-- {
+			tagValue := TagValue{}
+			tagValue.Tag = decodeString(f[56])
+			tagValue.Value = decodeString(f[57])
+			o.SmartComboRoutingParams = append(o.SmartComboRoutingParams, tagValue)
+			f = f[2:]
+		}
+
+		f = f[1:]
+	}
+
+	//ScaleOrderParams
+	if version >= 20 {
+		o.ScaleInitLevelSize = decodeIntCheckUnset(f[55]) //show_unset
+		o.ScaleSubsLevelSize = decodeIntCheckUnset(f[56]) //show_unset
+	} else {
+		o.NotSuppScaleNumComponents = decodeIntCheckUnset(f[55])
+		o.ScaleInitLevelSize = decodeIntCheckUnset(f[56])
+	}
+
+	o.ScalePriceIncrement = decodeFloatCheckUnset(f[57])
+
+	if version >= 28 && o.ScalePriceIncrement != UNSETFLOAT && o.ScalePriceIncrement > 0.0 {
+		o.ScalePriceAdjustValue = decodeFloatCheckUnset(f[58])
+		o.ScalePriceAdjustInterval = decodeIntCheckUnset(f[59])
+		o.ScaleProfitOffset = decodeFloatCheckUnset(f[60])
+		o.ScaleAutoReset = decodeBool(f[61])
+		o.ScaleInitPosition = decodeIntCheckUnset(f[62])
+		o.ScaleInitFillQty = decodeIntCheckUnset(f[63])
+		o.ScaleRandomPercent = decodeBool(f[64])
+		f = f[7:]
+	}
+
+	//HedgeParams
+	if version >= 24 {
+		o.HedgeType = decodeString(f[58])
+		if o.HedgeType != "" {
+			o.HedgeParam = decodeString(f[59])
+			f = f[1:]
+		}
+		f = f[1:]
+	}
+
+	// if version >= 25 {
+	// 	o.OptOutSmartRouting = decodeBool(f[68])
+	// 	f = f[1:]
+	// }
+
+	o.ClearingAccount = decodeString(f[58])
+	o.ClearingIntent = decodeString(f[59])
+
+	if version >= 22 {
+		o.NotHeld = decodeBool(f[60])
+		f = f[1:]
+	}
+
+	if version >= 20 {
+		deltaNeutralContractPresent := decodeBool(f[60])
+		if deltaNeutralContractPresent {
+			c.DeltaNeutralContract = new(DeltaNeutralContract)
+			c.DeltaNeutralContract.ContractID = decodeInt(f[61])
+			c.DeltaNeutralContract.Delta = decodeFloat(f[62])
+			c.DeltaNeutralContract.Price = decodeFloat(f[63])
+			f = f[3:]
+		}
+		f = f[1:]
+	}
+
+	if version >= 21 {
+		o.AlgoStrategy = decodeString(f[60])
+		if o.AlgoStrategy != "" {
+			o.AlgoParams = []TagValue{}
+			for algoParamsCount := decodeInt(f[61]); algoParamsCount > 0; algoParamsCount-- {
+				tagValue := TagValue{}
+				tagValue.Tag = decodeString(f[62])
+				tagValue.Value = decodeString(f[63])
+				o.AlgoParams = append(o.AlgoParams, tagValue)
+				f = f[2:]
+			}
+		}
+		f = f[1:]
+	}
+
+	if version >= 33 {
+		o.Solictied = decodeBool(f[60])
+		f = f[1:]
+	}
+
+	orderState.Status = decodeString(f[61])
+
+	if version >= 34 {
+		o.RandomizeSize = decodeBool(f[62])
+		o.RandomizePrice = decodeBool(f[63])
+		f = f[2:]
+	}
+
+	if d.version >= MIN_SERVER_VER_PEGGED_TO_BENCHMARK {
+		if o.OrderType == "PEG BENCH" {
+			o.ReferenceContractID = decodeInt(f[62])
+			o.IsPeggedChangeAmountDecrease = decodeBool(f[63])
+			o.PeggedChangeAmount = decodeFloat(f[64])
+			o.ReferenceChangeAmount = decodeFloat(f[65])
+			o.ReferenceExchangeID = decodeString(f[66])
+			f = f[5:]
+		}
+
+		o.Conditions = []OrderConditioner{}
+		if conditionsSize := decodeInt(f[62]); conditionsSize > 0 {
+			for ; conditionsSize > 0; conditionsSize-- {
+				conditionType := decodeInt(f[63])
+				cond, condSize := InitOrderCondition(conditionType)
+				cond.decode(f[64 : 64+condSize])
+
+				o.Conditions = append(o.Conditions, cond)
+				f = f[condSize+1:]
+			}
+			o.ConditionsIgnoreRth = decodeBool(f[63])
+			o.ConditionsCancelOrder = decodeBool(f[64])
+			f = f[2:]
+		}
+	}
+
+	o.TrailStopPrice = decodeFloat(f[62])
+	o.LimitPriceOffset = decodeFloat(f[63])
+
+	if d.version >= MIN_SERVER_VER_CASH_QTY {
+		o.CashQty = decodeFloat(f[64])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_AUTO_PRICE_FOR_HEDGE {
+		o.DontUseAutoPriceForHedge = decodeBool(f[64])
+		f = f[1:]
+	}
+
+	if d.version >= MIN_SERVER_VER_ORDER_CONTAINER {
+		o.IsOmsContainer = decodeBool(f[64])
+		f = f[1:]
+	}
+
+	o.AutoCancelDate = decodeString(f[64])
+	o.FilledQuantity = decodeFloat(f[65])
+	o.RefFuturesConId = decodeInt(f[66])
+	o.AutoCancelParent = decodeBool(f[67])
+	o.Shareholder = decodeString(f[68])
+	o.ImbalanceOnly = decodeBool(f[69])
+	o.RouteMarketableToBbo = decodeBool(f[70])
+	o.ParenPermID = decodeInt(f[70])
+
+	orderState.CompletedTime = decodeString(f[71])
+	orderState.CompletedStatus = decodeString(f[72])
+
+	d.wrapper.CompletedOrder(c, o, orderState)
+}
+
 // ----------------------------------------------------
+
+func (d *ibDecoder) processCompletedOrdersEndMsg(f [][]byte) {
+	d.wrapper.CompletedOrdersEnd()
+}

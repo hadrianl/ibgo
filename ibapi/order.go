@@ -184,6 +184,16 @@ type Order struct {
 
 	DiscretionaryUpToLimitPrice bool
 
+	AutoCancelDate       string
+	FilledQuantity       float64
+	RefFuturesConId      int64
+	AutoCancelParent     bool
+	Shareholder          string
+	ImbalanceOnly        bool
+	RouteMarketableToBbo bool
+	ParenPermID          int64
+	UsePriceMgmtAlgo     bool
+
 	SoftDollarTier SoftDollarTier
 
 	/*
@@ -216,6 +226,8 @@ type OrderState struct {
 	MaxCommission           float64 `default:"UNSETFLOAT"`
 	CommissionCurrency      string
 	WarningText             string
+	CompletedTime           string
+	CompletedStatus         string
 }
 
 type SoftDollarTier struct {

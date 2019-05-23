@@ -90,6 +90,8 @@ const (
 	HISTORICAL_TICKS_LAST                    IN = 98
 	TICK_BY_TICK                             IN = 99
 	ORDER_BOUND                              IN = 100
+	COMPLETED_ORDER                          IN = 101
+	COMPLETED_ORDERS_END                     IN = 102
 )
 
 const (
@@ -167,6 +169,7 @@ const (
 	REQ_HISTORICAL_TICKS          OUT = 96
 	REQ_TICK_BY_TICK_DATA         OUT = 97
 	CANCEL_TICK_BY_TICK_DATA      OUT = 98
+	REQ_COMPLETED_ORDERS          OUT = 99
 )
 
 const (
@@ -260,9 +263,11 @@ const (
 	MIN_SERVER_VER_REMOVE_NULL_ALL_CASTING    Version = 147
 	MIN_SERVER_VER_D_PEG_ORDERS               Version = 148
 	MIN_SERVER_VER_MKT_DEPTH_PRIM_EXCHANGE    Version = 149
+	MIN_SERVER_VER_COMPLETED_ORDERS           Version = 150
+	MIN_SERVER_VER_PRICE_MGMT_ALGO            Version = 151
 
 	MIN_CLIENT_VER = 100
-	MAX_CLIENT_VER = MIN_SERVER_VER_D_PEG_ORDERS
+	MAX_CLIENT_VER = MIN_SERVER_VER_PRICE_MGMT_ALGO
 )
 
 // tick const

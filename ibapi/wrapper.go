@@ -86,7 +86,8 @@ type IbWrapper interface {
 	TickByTickBidAsk(reqID int64, time int64, bidPrice float64, askPrice float64, bidSize int64, askSize int64, tickAttribBidAsk TickAttribBidAsk)
 	TickByTickMidPoint(reqID int64, time int64, midPoint float64)
 	OrderBound(reqID int64, apiClientID int64, apiOrderID int64)
-
+	CompletedOrder(contract *Contract, order *Order, orderState *OrderState)
+	CompletedOrdersEnd()
 	CommissionReport(commissionReport CommissionReport)
 	ConnectAck()
 }
@@ -429,4 +430,12 @@ func (w Wrapper) CurrentTime(t time.Time) {
 
 func (w Wrapper) Error(reqID int64, errCode int64, errString string) {
 	log.WithFields(log.Fields{"reqID": reqID, "errCode": errCode, "errString": errString}).Error("Wrapper Error!")
+}
+
+func (w Wrapper) CompletedOrder(contract *Contract, order *Order, orderState *OrderState) {
+	log.Printf("<completedOrder>: contract: %v order: %v orderState: %v", contract, order, orderState)
+}
+
+func (w Wrapper) CompletedOrdersEnd() {
+	log.Println("<completedOrdersEnd>:")
 }
