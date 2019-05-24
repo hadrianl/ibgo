@@ -14,7 +14,7 @@ const (
 	TIME_FORMAT string = "2006-01-02 15:04:05 +0700 CST"
 )
 
-// ibDecoder help to decode the msg buf received from TWS or Gateway
+// ibDecoder help to decode the msg bytes received from TWS or Gateway
 type ibDecoder struct {
 	wrapper       IbWrapper
 	version       Version
@@ -42,7 +42,7 @@ func (d *ibDecoder) interpret(fs ...[]byte) {
 	if processer, ok := d.msgID2process[IN(MsgID)]; ok {
 		processer(fs[1:])
 	} else {
-		log.Printf("MsgId: %v -> MsgBuf: %v", MsgID, fs[1:])
+		log.Printf("MsgId: %v -> MsgBytes: %v", MsgID, fs[1:])
 	}
 
 }

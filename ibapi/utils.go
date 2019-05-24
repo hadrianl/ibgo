@@ -19,14 +19,9 @@ const (
 	NO_VALID_ID int64   = -1
 )
 
-// // bytesToInt used to convert the first 4 byte into the message size
-// func bytesToInt(buf []byte) int32 {
-// 	return int32(binary.BigEndian.Uint32(buf))
-// }
-
-func bytesToTime(buf []byte) time.Time {
+func bytesToTime(b []byte) time.Time {
 	format := "20060102 15:04:05 CST"
-	t := string(buf)
+	t := string(b)
 	localtime, err := time.ParseInLocation(format, t, time.Local)
 	if err != nil {
 		log.Println(err)
@@ -34,45 +29,45 @@ func bytesToTime(buf []byte) time.Time {
 	return localtime
 }
 
-// readMsg try to read the msg based on the message size
-func readMsgBuf(reader *bufio.Reader) ([]byte, error) {
-	sizeBuf := make([]byte, 4)
-	//try to get 4bytes sizeBuf
+// readMsgBytes try to read the msg based on the message size
+func readMsgBytes(reader *bufio.Reader) ([]byte, error) {
+	sizeBytes := make([]byte, 4)
+	//try to get 4bytes sizeBytes
 	for n, r := 0, 4; n < r; {
-		tempMsgBuf := make([]byte, r-n)
-		tn, err := reader.Read(tempMsgBuf)
+		tempMsgBytes := make([]byte, r-n)
+		tn, err := reader.Read(tempMsgBytes)
 		if err != nil {
 			return nil, err
 		}
 
-		copy(sizeBuf[n:n+tn], tempMsgBuf)
+		copy(sizeBytes[n:n+tn], tempMsgBytes)
 		n += tn
 	}
 
-	size := int(binary.BigEndian.Uint32(sizeBuf))
-	log.Debugf("readMsgBuf-> SizeBuf: %v", size)
+	size := int(binary.BigEndian.Uint32(sizeBytes))
+	log.Debugf("readMsgBytes-> sizeBytes: %v", size)
 
-	msgBuf := make([]byte, size)
+	msgBytes := make([]byte, size)
 
 	// XXX: maybe there is a better way to get fixed size of bytes
 	for n, r := 0, size; n < r; {
-		tempMsgBuf := make([]byte, r-n)
-		tn, err := reader.Read(tempMsgBuf)
+		tempMsgBytes := make([]byte, r-n)
+		tn, err := reader.Read(tempMsgBytes)
 		if err != nil {
 			return nil, err
 		}
 
-		copy(msgBuf[n:n+tn], tempMsgBuf)
+		copy(msgBytes[n:n+tn], tempMsgBytes)
 		n += tn
 
 	}
 
-	log.Debugf("readMsgBuf-> msgBuf: %v", msgBuf)
-	return msgBuf, nil
+	log.Debugf("readMsgBytes-> msgBytes: %v", msgBytes)
+	return msgBytes, nil
 
 }
 
-func field2Buf(msg interface{}) []byte {
+func field2Bytes(msg interface{}) []byte {
 	var b []byte
 
 	switch msg.(type) {
@@ -95,33 +90,33 @@ func field2Buf(msg interface{}) []byte {
 	// 	b = encodeTime(msg.(time.Time))
 
 	default:
-		log.Panicf("errmakeMsgBuf: can't converst the param-> %v", msg)
+		log.Panicf("errmakeMsgBytes: can't converst the param-> %v", msg)
 	}
 
 	return append(b, '\x00')
 }
 
-// makeMsgBuf is a universal way to make the request ,but not an efficient way
+// makeMsgBytes is a universal way to make the request ,but not an efficient way
 // TODO: do some test and improve!!!
-func makeMsgBuf(fields ...interface{}) []byte {
+func makeMsgBytes(fields ...interface{}) []byte {
 
-	// make the whole msg buf
-	msgBufs := [][]byte{}
+	// make the whole the slice of msgBytes
+	msgBytesSlice := [][]byte{}
 	for _, f := range fields {
-		// make the field into buf
-		msgBuf := field2Buf(f)
-		msgBufs = append(msgBufs, msgBuf)
+		// make the field into msgBytes
+		msgBytes := field2Bytes(f)
+		msgBytesSlice = append(msgBytesSlice, msgBytes)
 	}
-	msg := bytes.Join(msgBufs, []byte(""))
+	msg := bytes.Join(msgBytesSlice, []byte(""))
 
 	// add the size header
-	sizeBuf := make([]byte, 4)
-	binary.BigEndian.PutUint32(sizeBuf, uint32(len(msg)))
+	sizeBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(sizeBytes, uint32(len(msg)))
 
-	return append(sizeBuf, msg...)
+	return append(sizeBytes, msg...)
 }
 
-func splitMsgBuf(data []byte) [][]byte {
+func splitMsgBytes(data []byte) [][]byte {
 	fields := bytes.Split(data, []byte{fieldSplit})
 	return fields[:len(fields)-1]
 
