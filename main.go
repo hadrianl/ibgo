@@ -50,16 +50,18 @@ func (ib *IB) DisConnect() error {
 }
 
 func (ib *IB) DoSomeTest() {
-	hsij9 := ibapi.Contract{359142357, "HSI", "FUT", "20190530", 0, "?", "50", "HKFE", "HKD", "HSIK9", "HSI", "", false, "", "", "", nil, nil}
+	// HSIM9 := ibapi.Contract{339948011, "HSI", "FUT", "20190627", 0, "?", "50", "HKFE", "HKD", "HSIM9", "HSI", "", false, "", "", "", nil, nil}
 	// fmt.Println(hsij9)
 	// ib.Client.ReqCurrentTime()
 	// ib.Client.ReqAutoOpenOrders(true)
 	// ib.Client.ReqAccountUpdates(true, "")
 
-	ib.Client.ReqHistoricalData(ib.Client.GetReqID(), hsij9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
+	// ib.Client.ReqHistoricalData(ib.Client.GetReqID(), HSIM9, "", "600 S", "1 min", "TRADES", false, 1, true, nil)
+	// ib.Client.ReqExecutions()
 	// ef := ExecutionFilter{0, "", "DU1382837", "", "", "", ""}
 	// ef := ExecutionFilter{}
-	// ib.Client.ReqExecutions(ib.Client.GetReqID(), ef)
+	// ib.Client.ReqExecutions(ib.Client.GetReqID(), ibapi.ExecutionFilter{})
+	ib.Client.ReqCompletedOrders(true)
 	// ib.Client.ReqMktData(1, hsij9, "", false, false, nil)
 	// order := NewDefaultOrder()
 	// order.LimitPrice = 30050

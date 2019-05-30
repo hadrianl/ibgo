@@ -31,7 +31,7 @@ func bytesToTime(b []byte) time.Time {
 
 // readMsgBytes try to read the msg based on the message size
 func readMsgBytes(reader *bufio.Reader) ([]byte, error) {
-	sizeBytes := make([]byte, 4)
+	sizeBytes := make([]byte, 4) // sync.Pool?
 	//try to get 4bytes sizeBytes
 	for n, r := 0, 4; n < r; {
 		tempMsgBytes := make([]byte, r-n)

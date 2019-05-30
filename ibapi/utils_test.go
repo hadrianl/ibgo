@@ -20,7 +20,7 @@ func TestIbWrite(t *testing.T) {
 }
 
 func TestSplitMsg(t *testing.T) {
-	f := splitMsgBuf([]byte("API\x00sfsdfs\x00dfsfs\x00"))
+	f := splitMsgBytes([]byte("API\x00sfsdfs\x00dfsfs\x00"))
 	t.Log(f)
 	// fmt.Println(f)
 }

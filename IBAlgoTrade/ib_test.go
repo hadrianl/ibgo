@@ -12,7 +12,7 @@ import (
 
 func TestIB(t *testing.T) {
 	log.SetLevel(log.InfoLevel)
-	ib := IBAlgoTrade.NewIB("127.0.0.1", 7497, 0)
+	ib := IBAlgoTrade.NewIB("192.168.2.226", 4002, 0)
 	if err := ib.Connect(); err != nil {
 		log.Panicf("Connect failed: %v", err)
 	}
