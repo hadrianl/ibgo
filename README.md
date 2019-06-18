@@ -1,4 +1,4 @@
 # Interactive Broker API - Golang Version for latest 9.76
-- DEVELOPING!!!!
-- ibapi might be good to go but not completely tested,help me with the test
-- ibAlgoTrade is under developing, similar with the python project ib_sync
+- this repository is an undone work
+- ibapi has already migrated to [hadrianl/ibapi](https://github.com/hadrianl/ibapi)
+- IBAlgoTrade will be separated from this repository
